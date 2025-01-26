@@ -1,0 +1,12 @@
+if TARGET_ARTIK5
+
+config SYS_BOARD
+	default "artik5"
+
+config SYS_VENDOR
+	default "samsung"
+
+config SYS_CONFIG_NAME
+	default "artik5"
+
+endif

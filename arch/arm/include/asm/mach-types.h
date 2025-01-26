@@ -5051,4 +5051,5 @@
 #define MACH_TYPE_TOMATO               5113
 #define MACH_TYPE_OMAP3_MRC3D          5114
 #define MACH_TYPE_OMAP4_VAR_SOM        5115
+#define MACH_TYPE_ARTIK5               5116
 #endif
