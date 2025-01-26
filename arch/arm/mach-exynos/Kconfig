@@ -24,6 +24,13 @@ config ARCH_EXYNOS4
 	  are multiple SoCs in this family including Exynos4210, Exynos4412,
 	  and Exynos4212.
 
+config ARCH_EXYNOS3
+	bool "Exynos3 SoC family"
+	select CPU_V7A
+	help
+	  Samsung Exynos3 SoC family are based on ARM Cortex-A7 CPU. There
+	  are multiple SoCs in this family including Exynos3250.
+
 config ARCH_EXYNOS5
 	bool "Exynos5 SoC family"
 	select BOARD_EARLY_INIT_F
@@ -64,6 +71,21 @@ config ARCH_EXYNOS9
 	  multiple SoCs in this family including Exynos850.
 
 endchoice
+
+if ARCH_EXYNOS3
+
+config EXYNOS3250
+	bool
+
+choice
+	prompt "EXYNOS3 board select"
+
+config TARGET_ARTIK5
+	bool "EXYNOS3250 Artik5 board"
+	select EXYNOS3250
+
+endchoice
+endif
 
 if ARCH_EXYNOS4
 
@@ -277,5 +299,6 @@ source "board/samsung/smdk5420/Kconfig"
 source "board/samsung/espresso7420/Kconfig"
 source "board/samsung/axy17lte/Kconfig"
 source "board/samsung/e850-96/Kconfig"
+source "board/samsung/artik5/Kconfig"
 
 endif
