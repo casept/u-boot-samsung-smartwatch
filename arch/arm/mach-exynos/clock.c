@@ -126,7 +126,8 @@ static int exynos_get_pll_clk(int pllreg, unsigned int r, unsigned int k)
 	 * BPLL_CON: MIDV [25:16]: Exynos5
 	 */
 	if (pllreg == APLL || pllreg == MPLL || pllreg == BPLL ||
-	    pllreg == SPLL)
+	    pllreg == SPLL ||
+		(proid_is_exynos3250() && pllreg == MPLL))
 		mask = 0x3ff;
 	else
 		mask = 0x1ff;
@@ -712,8 +713,18 @@ static unsigned long exynos4_get_uart_clk(int dev_index)
 	sel = readl(&clk->src_peril0);
 	sel = (sel >> (dev_index << 2)) & 0xf;
 
-	if (sel == 0x6)
-		sclk = get_pll_clk(MPLL);
+	if (sel == 0x6) {
+	    sclk = get_pll_clk(MPLL);
+        if (proid_is_exynos3250()) {
+            unsigned int mpll_ratio_pre;
+            /*
+             * TODO: Fix the warning regarding && 0x3,
+             * probably a mistake in downstream code this was copied from.
+             */
+            mpll_ratio_pre = (readl(&clk->div_top) >> 28) && 0x3;
+            sclk = sclk / EXYNOS3250_MPLL_PRE_DIV / (mpll_ratio_pre + 1);
+        }
+	}
 	else if (sel == 0x7)
 		sclk = get_pll_clk(EPLL);
 	else if (sel == 0x8)
