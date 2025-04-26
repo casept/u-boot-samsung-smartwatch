@@ -1,6 +1,5 @@
-UNIVERSAL_C210 BOARD
-M:	Jaehoon Chung <jh80.chung@samsung.com>
+ARTIK5 BOARD
+M:	Davids Paskevics <davids.paskevics@gmail.com>
 S:	Maintained
-F:	board/samsung/universal_c210/
-F:	include/configs/s5pc210_universal.h
-F:	configs/s5pc210_universal_defconfig
+F:	board/samsung/artik5/
+F:	configs/artik5_defconfig

@@ -19,6 +19,8 @@
 #define DPLL	9
 #define IPLL	10
 
+#define EXYNOS3250_MPLL_PRE_DIV 2
+
 #define MASK_PRE_RATIO(x)	(0xff << ((x << 4) + 8))
 #define MASK_RATIO(x)		(0xf << (x << 4))
 #define SET_PRE_RATIO(x, y)	((y & 0xff) << ((x << 4) + 8))
