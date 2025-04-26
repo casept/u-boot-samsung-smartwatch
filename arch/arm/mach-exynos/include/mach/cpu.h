@@ -238,6 +238,10 @@ static inline void s5p_set_cpu_id(void)
 		 */
 		s5p_cpu_id = 0x5422;
 		break;
+	case 0x472:
+	    /* Exynos3250 */
+		s5p_cpu_id = 0x3250;
+		break;
 	}
 }
 
@@ -252,7 +256,12 @@ static inline int notrace cpu_is_##type(void)		\
 	return (s5p_cpu_id >> 12) == id;		\
 }
 
-IS_SAMSUNG_TYPE(exynos4, 0x4)
+/*
+ * FIXME: Doing it like this breaks other exynos4 SoCs.
+ * exynos3250 is like exynos4, but it's ID is 0x3.
+ */
+// IS_SAMSUNG_TYPE(exynos4, 0x4)
+IS_SAMSUNG_TYPE(exynos4, 0x3)
 IS_SAMSUNG_TYPE(exynos5, 0x5)
 
 #define IS_EXYNOS_TYPE(type, id)			\
@@ -262,6 +271,7 @@ static inline int notrace				\
 	return s5p_cpu_id == id;			\
 }
 
+IS_EXYNOS_TYPE(exynos3250, 0x3250)
 IS_EXYNOS_TYPE(exynos4210, 0x4210)
 IS_EXYNOS_TYPE(exynos4412, 0x4412)
 IS_EXYNOS_TYPE(exynos5250, 0x5250)
