@@ -7,6 +7,8 @@
 
     aliases {
     	console = &uart2;
+        mmc0 = &mshc_0;
+        mmc1 = &mshc_2;
     };
 
     chosen {
@@ -20,8 +22,17 @@
 	};
 
 };
- 
+
 &fin_pll {
 	clock-frequency = <24000000>;
 };
 
+&mshc_0 {
+	status = "okay";
+	index = <0>;
+};
+
+&mshc_2 {
+	status = "okay";
+	index = <1>;
+};
