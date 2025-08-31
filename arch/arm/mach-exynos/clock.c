@@ -715,15 +715,15 @@ static unsigned long exynos4_get_uart_clk(int dev_index)
 
 	if (sel == 0x6) {
 	    sclk = get_pll_clk(MPLL);
-        if (proid_is_exynos3250()) {
-            unsigned int mpll_ratio_pre;
-            /*
-             * TODO: Fix the warning regarding && 0x3,
-             * probably a mistake in downstream code this was copied from.
-             */
-            mpll_ratio_pre = (readl(&clk->div_top) >> 28) && 0x3;
-            sclk = sclk / EXYNOS3250_MPLL_PRE_DIV / (mpll_ratio_pre + 1);
-        }
+      if (proid_is_exynos3250()) {
+          unsigned int mpll_ratio_pre;
+          /*
+           * TODO: Fix the warning regarding && 0x3,
+           * probably a mistake in downstream code this was copied from.
+           */
+          mpll_ratio_pre = (readl(&clk->div_top) >> 28) && 0x3;
+          sclk = sclk / EXYNOS3250_MPLL_PRE_DIV / (mpll_ratio_pre + 1);
+      }
 	}
 	else if (sel == 0x7)
 		sclk = get_pll_clk(EPLL);
@@ -805,15 +805,24 @@ static unsigned long exynos4_get_mmc_clk(int dev_index)
 	sel = readl(&clk->src_fsys);
 	sel = (sel >> (dev_index << 2)) & 0xf;
 
-	if (sel == 0x6)
+	if (sel == 0x6) {
 		sclk = get_pll_clk(MPLL);
+		unsigned long sclk = get_pll_clk(MPLL);
+		if (proid_is_exynos3250()) {
+			unsigned int mpll_ratio_pre = (readl(&clk->div_top) >> 28) && 0x3;
+			sclk = sclk / EXYNOS3250_MPLL_PRE_DIV / (mpll_ratio_pre + 1);
+		}
+	}
 	else if (sel == 0x7)
 		sclk = get_pll_clk(EPLL);
 	else if (sel == 0x8)
 		sclk = get_pll_clk(VPLL);
-	else
+	else {
+		log_err("Unknown sel = %d\n", sel);
 		return 0;
+	}
 
+	/*
 	switch (dev_index) {
 	case 0:
 	case 1:
@@ -841,23 +850,54 @@ static unsigned long exynos4_get_mmc_clk(int dev_index)
 	uclk = (sclk / (ratio + 1)) / (pre_ratio + 1);
 
 	return uclk;
+	*/
+
+	/*
+	 * CLK_DIV_FSYS1
+	 * MMC0_PRE_RATIO [15:8], MMC1_PRE_RATIO [31:24]
+	 * MMC0_RATIO [3:0],	  MMC1_RATIO [16:19]
+	 * CLK_DIV_FSYS2
+	 * MMC2_PRE_RATIO [15:8], MMC3_PRE_RATIO [31:24]
+	 * MMC2_RATIO [3:0],	  MMC3_RATIO [16:19]
+	 * CLK_DIV_FSYS3
+	 * MMC4_PRE_RATIO [15:8]
+	 * MMC4_RATIO [3:0]
+	 */
+	unsigned int addr;
+	if (dev_index < 2) {
+		addr = (unsigned int)&clk->div_fsys1;
+	} else if (2 <= dev_index && dev_index < 4) {
+		addr = (unsigned int)&clk->div_fsys2;
+		dev_index -= 2;
+	} else {
+		addr = (unsigned int)&clk->div_fsys3;
+		dev_index = 0;
+	}
+
+	ratio = readl(addr);
+	/* get MMCx_PRE_RATIO */
+	pre_ratio = (ratio >> ((dev_index << 4) + 8)) & 0xff;
+	/* get MMCx_RATIO */
+	ratio = (ratio >> (dev_index << 4)) & 0xff;
+
+	return (sclk / (pre_ratio + 1)) / (ratio + 1);
+
 }
 
 /* exynos4: set the mmc clock */
+/*
 static void exynos4_set_mmc_clk(int dev_index, unsigned int div)
 {
 	struct exynos4_clock *clk =
 		(struct exynos4_clock *)samsung_get_base_clock();
 	unsigned int addr, clear_bit, set_bit;
 
-	/*
 	 * CLK_DIV_FSYS1
 	 * MMC0_PRE_RATIO [15:8], MMC1_PRE_RATIO [31:24]
 	 * CLK_DIV_FSYS2
 	 * MMC2_PRE_RATIO [15:8], MMC3_PRE_RATIO [31:24]
 	 * CLK_DIV_FSYS3
 	 * MMC4_RATIO [3:0]
-	 */
 	if (dev_index < 2) {
 		addr = (unsigned int)&clk->div_fsys1;
 		clear_bit = MASK_PRE_RATIO(dev_index);
@@ -865,7 +905,7 @@ static void exynos4_set_mmc_clk(int dev_index, unsigned int div)
 	} else if (dev_index == 4) {
 		addr = (unsigned int)&clk->div_fsys3;
 		dev_index -= 4;
-		/* MMC4 is controlled with the MMC4_RATIO value */
+		* MMC4 is controlled with the MMC4_RATIO value *
 		clear_bit = MASK_RATIO(dev_index);
 		set_bit = SET_RATIO(dev_index, div);
 	} else {
@@ -877,6 +917,46 @@ static void exynos4_set_mmc_clk(int dev_index, unsigned int div)
 
 	clrsetbits_le32(addr, clear_bit, set_bit);
 }
+*/
+
+/* exynos4: set the mmc clock */
+static void exynos4_set_mmc_clk(int dev_index, unsigned int div)
+{
+	struct exynos4_clock *clk =
+		(struct exynos4_clock *)samsung_get_base_clock();
+	unsigned int addr;
+	unsigned int val;
+
+	/*
+	 * CLK_DIV_FSYS1
+	 * MMC0_PRE_RATIO [15:8], MMC1_PRE_RATIO [31:24]
+	 * MMC0_RATIO [3:0],      MMC1_RATIO [16:19]
+	 * CLK_DIV_FSYS2
+	 * MMC2_PRE_RATIO [15:8], MMC3_PRE_RATIO [31:24]
+	 * MMC2_RATIO [3:0],      MMC3_RATIO [16:19]
+	 * CLK_DIV_FSYS3
+	 * MMC4_PRE_RATIO [15:8]
+	 * MMC4_RATIO [3:0]
+	 */
+	if (dev_index < 2) {
+		addr = (unsigned int)&clk->div_fsys1;
+	} else if (2 <= dev_index && dev_index < 4) {
+		addr = (unsigned int)&clk->div_fsys2;
+		dev_index -= 2;
+	} else {
+		addr = (unsigned int)&clk->div_fsys3;
+		dev_index = 0;
+	}
+
+	val = readl(addr);
+	/* clear MMCx_PRE_RATIO */
+	val &= ~(0xff << ((dev_index << 4) + 8));
+	/* clear MMCx_RATIO */
+	val &= ~(0xff << (dev_index << 4));
+	val |= (div & 0xff) << ((dev_index << 4) + 8);
+	writel(val, addr);
+}
+
 
 /* exynos5: set the mmc clock */
 static void exynos5_set_mmc_clk(int dev_index, unsigned int div)
