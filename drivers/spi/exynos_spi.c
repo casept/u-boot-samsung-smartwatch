@@ -412,6 +412,7 @@ static const struct dm_spi_ops exynos_spi_ops = {
 
 static const struct udevice_id exynos_spi_ids[] = {
 	{ .compatible = "samsung,exynos-spi" },
+	{ .compatible = "samsung,exynos4210-spi" },
 	{ }
 };
 
