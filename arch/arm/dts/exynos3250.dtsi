@@ -3,6 +3,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 
 #include "skeleton.dtsi"
+#include "exynos3250-pinctrl.dtsi"
 
 / {
 	compatible = "samsung,exynos3250", "samsung,exynos3";

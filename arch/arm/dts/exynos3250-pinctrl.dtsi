@@ -1,0 +1,158 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Samsung Exynos3250 GPIO banks.
+ *
+ * Bank offsets ("reg", relative to the controller base) match the Linux
+ * pinctrl driver (drivers/pinctrl/samsung/pinctrl-exynos-arm.c).  Banks
+ * without a reg follow their predecessor contiguously (0x20 stride).
+ */
+
+/ {
+	pinctrl_0: pinctrl@11400000 {
+		compatible = "samsung,exynos3250-pinctrl";
+		reg = <0x11400000 0x1000>;
+
+		gpa0: gpa0 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x000>;
+		};
+
+		gpa1: gpa1 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x020>;
+		};
+
+		gpb: gpb {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x040>;
+		};
+
+		gpc0: gpc0 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x060>;
+		};
+
+		gpc1: gpc1 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x080>;
+		};
+
+		gpd0: gpd0 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x0a0>;
+		};
+
+		gpd1: gpd1 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x0c0>;
+		};
+	};
+
+	pinctrl_1: pinctrl@11000000 {
+		compatible = "samsung,exynos3250-pinctrl";
+		reg = <0x11000000 0x1000>;
+
+		gpe0: gpe0 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x120>;
+		};
+
+		gpe1: gpe1 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x140>;
+		};
+
+		gpe2: gpe2 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x180>;
+		};
+
+		gpk0: gpk0 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x040>;
+		};
+
+		gpk1: gpk1 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x060>;
+		};
+
+		gpk2: gpk2 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x080>;
+		};
+
+		gpl0: gpl0 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x0c0>;
+		};
+
+		gpm0: gpm0 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x260>;
+		};
+
+		gpm1: gpm1 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x280>;
+		};
+
+		gpm2: gpm2 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x2a0>;
+		};
+
+		gpm3: gpm3 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x2c0>;
+		};
+
+		gpm4: gpm4 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0x2e0>;
+		};
+
+		gpx0: gpx0 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0xc00>;
+		};
+
+		gpx1: gpx1 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0xc20>;
+		};
+
+		gpx2: gpx2 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0xc40>;
+		};
+
+		gpx3: gpx3 {
+			gpio-controller;
+			#gpio-cells = <2>;
+			reg = <0xc60>;
+		};
+	};
+};
