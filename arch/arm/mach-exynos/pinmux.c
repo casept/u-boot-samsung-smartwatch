@@ -806,6 +806,29 @@ static void exynos4x12_uart_config(int peripheral)
 	}
 }
 
+static void exynos4_spi_config(int peripheral)
+{
+	int i, start;
+
+	/* Also valid for the exynos3250, which reuses this pin layout */
+	switch (peripheral) {
+	case PERIPH_ID_SPI0:
+		start = EXYNOS4_GPIO_B0;
+		break;
+	case PERIPH_ID_SPI1:
+		start = EXYNOS4_GPIO_B4;
+		break;
+	default:
+		debug("%s: invalid peripheral %d\n", __func__, peripheral);
+		return;
+	}
+	/* CLK, nSS, MISO, MOSI */
+	for (i = start; i < (start + 4); i++) {
+		gpio_cfg_pin(i, S5P_GPIO_FUNC(0x2));
+		gpio_set_pull(i, S5P_GPIO_PULL_NONE);
+	}
+}
+
 static int exynos4_pinmux_config(int peripheral, int flags)
 {
 	switch (peripheral) {
@@ -833,6 +856,10 @@ static int exynos4_pinmux_config(int peripheral, int flags)
 	case PERIPH_ID_SDMMC3:
 		debug("SDMMC device %d not implemented\n", peripheral);
 		return -1;
+	case PERIPH_ID_SPI0:
+	case PERIPH_ID_SPI1:
+		exynos4_spi_config(peripheral);
+		break;
 	default:
 		debug("%s: invalid peripheral %d\n", __func__, peripheral);
 		return -1;
