@@ -1542,6 +1542,82 @@ static int clock_calc_best_scalar(unsigned int main_scaler_bits,
 	return best_main_scalar;
 }
 
+/* exynos3250 clock registers that are not in the exynos4 layout */
+#define EXYNOS3_MPLL_CON0_OFFSET	0xc110
+#define EXYNOS3_DIV_TOP_OFFSET		0xc510
+
+/* Rate of the exynos3250 peripheral clock mux input 6 (div_mpll_pre) */
+static unsigned long exynos3_get_mpll_pre_div_clk(void)
+{
+	unsigned long base = samsung_get_base_clock();
+	unsigned long mpll;
+	unsigned int pre_div;
+
+	mpll = exynos_get_pll_clk(MPLL,
+				  readl(base + EXYNOS3_MPLL_CON0_OFFSET), 0);
+	pre_div = (readl(base + EXYNOS3_DIV_TOP_OFFSET) >> 28) & 0x3;
+
+	/* div_mpll_pre = sclk_mpll_mif / (pre_div + 1) = MPLL / 2 / ... */
+	return mpll / 2 / (pre_div + 1);
+}
+
+static int exynos4_set_spi_clk(enum periph_id periph_id,
+					unsigned int rate)
+{
+	struct exynos4_clock *clk =
+		(struct exynos4_clock *)samsung_get_base_clock();
+	int main;
+	unsigned int fine;
+	unsigned shift, pre_shift;
+	unsigned long source;
+	int id;
+
+	switch (periph_id) {
+	case PERIPH_ID_SPI0:
+		id = 0;
+		break;
+	case PERIPH_ID_SPI1:
+		id = 1;
+		break;
+	default:
+		debug("%s: Unsupported peripheral ID %d\n", __func__,
+		      periph_id);
+		return -1;
+	}
+
+	/*
+	 * CLK_SRC_PERIL1: SPI0_SEL [19:16], SPI1_SEL [23:20].
+	 * Source 6 is SCLK_MPLL (on the exynos3250: SCLK_MPLL_PRE_DIV).
+	 */
+	clrsetbits_le32(&clk->src_peril1, 0xf << (16 + 4 * id),
+			0x6 << (16 + 4 * id));
+
+	/* The exynos3250 MPLL is not where the exynos4 layout has it */
+	if (cpu_is_exynos3())
+		source = exynos3_get_mpll_pre_div_clk();
+	else
+		source = get_pll_clk(MPLL);
+
+	main = clock_calc_best_scalar(4, 8, source, rate, &fine);
+	if (main < 0) {
+		debug("%s: Cannot set clock rate for periph %d",
+		      __func__, periph_id);
+		return -1;
+	}
+	main = main - 1;
+	fine = fine - 1;
+
+	/* DIV_PERIL1: SPIn_RATIO [3:0]/[19:16], SPIn_PRE_RATIO [15:8]/[31:24] */
+	shift = id ? 16 : 0;
+	pre_shift = id ? 24 : 8;
+	clrsetbits_le32(&clk->div_peril1, 0xf << shift,
+			(main & 0xf) << shift);
+	clrsetbits_le32(&clk->div_peril1, 0xff << pre_shift,
+			(fine & 0xff) << pre_shift);
+
+	return 0;
+}
+
 static int exynos5_set_spi_clk(enum periph_id periph_id,
 					unsigned int rate)
 {
@@ -1850,6 +1926,8 @@ int set_spi_clk(int periph_id, unsigned int rate)
 			return exynos5420_set_spi_clk(periph_id, rate);
 		return exynos5_set_spi_clk(periph_id, rate);
 	}
+	if (cpu_is_exynos4_compat())
+		return exynos4_set_spi_clk(periph_id, rate);
 
 	return 0;
 }
