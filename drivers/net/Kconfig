@@ -1115,6 +1115,12 @@ source "drivers/net/phy/Kconfig"
 source "drivers/net/pfe_eth/Kconfig"
 source "drivers/net/fsl-mc/Kconfig"
 
+config AX88796C_SPI
+	bool "ASIX AX88796C SPI Ethernet driver"
+	depends on DM_ETH && DM_SPI
+	help
+	  Enable support for the ASIX AX88796C SPI Ethernet controller.
+
 endif # NETDEVICES
 
 endmenu

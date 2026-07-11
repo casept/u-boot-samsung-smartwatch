@@ -114,3 +114,5 @@ obj-y += mscc_eswitch/
 obj-y += phy/
 obj-y += qe/
 obj-y += ti/
+
+obj-$(CONFIG_AX88796C_SPI) += ax88796c.o
