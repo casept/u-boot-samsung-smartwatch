@@ -18,6 +18,7 @@
 #include <asm/arch/pinmux.h>
 #include <asm/arch/spi.h>
 #include <asm/global_data.h>
+#include <asm/gpio.h>
 #include <asm/io.h>
 #include <linux/delay.h>
 
@@ -30,6 +31,8 @@ struct exynos_spi_plat {
 	uint deactivate_delay_us;	/* Delay to wait after deactivate */
 };
 
+#define EXYNOS_SPI_MAX_CS	4
+
 struct exynos_spi_priv {
 	struct exynos_spi *regs;
 	unsigned int freq;		/* Default frequency */
@@ -38,6 +41,8 @@ struct exynos_spi_priv {
 	unsigned int fifo_size;
 	int skip_preamble;
 	ulong last_transaction_us;	/* Time of last transaction end */
+	/* Optional GPIO chip selects (cs-gpios), one per chip select */
+	struct gpio_desc cs_gpios[EXYNOS_SPI_MAX_CS];
 };
 
 /**
@@ -204,11 +209,25 @@ static int spi_rx_tx(struct exynos_spi_priv *priv, int todo,
  * @param slave	Pointer to spi_slave to which controller has to
  *		communicate with
  */
+static struct gpio_desc *spi_cs_gpio(struct udevice *dev)
+{
+	struct udevice *bus = dev->parent;
+	struct exynos_spi_priv *priv = dev_get_priv(bus);
+	struct dm_spi_slave_plat *slave_plat = dev_get_parent_plat(dev);
+
+	if (slave_plat->cs[0] >= EXYNOS_SPI_MAX_CS ||
+	    !dm_gpio_is_valid(&priv->cs_gpios[slave_plat->cs[0]]))
+		return NULL;
+
+	return &priv->cs_gpios[slave_plat->cs[0]];
+}
+
 static void spi_cs_activate(struct udevice *dev)
 {
 	struct udevice *bus = dev->parent;
 	struct exynos_spi_plat *pdata = dev_get_plat(bus);
 	struct exynos_spi_priv *priv = dev_get_priv(bus);
+	struct gpio_desc *cs_gpio = spi_cs_gpio(dev);
 
 	/* If it's too soon to do another transaction, wait */
 	if (pdata->deactivate_delay_us &&
@@ -219,6 +238,10 @@ static void spi_cs_activate(struct udevice *dev)
 			udelay(pdata->deactivate_delay_us - delay_us);
 	}
 
+	if (cs_gpio)
+		dm_gpio_set_value(cs_gpio, 1);
+	/* The controller only shifts data while its own CS is asserted,
+	 * even when the slave is selected by GPIO instead */
 	clrbits_le32(&priv->regs->cs_reg, SPI_SLAVE_SIG_INACT);
 	debug("Activate CS, bus '%s'\n", bus->name);
 	priv->skip_preamble = priv->mode & SPI_PREAMBLE;
@@ -235,8 +258,11 @@ static void spi_cs_deactivate(struct udevice *dev)
 	struct udevice *bus = dev->parent;
 	struct exynos_spi_plat *pdata = dev_get_plat(bus);
 	struct exynos_spi_priv *priv = dev_get_priv(bus);
+	struct gpio_desc *cs_gpio = spi_cs_gpio(dev);
 
 	setbits_le32(&priv->regs->cs_reg, SPI_SLAVE_SIG_INACT);
+	if (cs_gpio)
+		dm_gpio_set_value(cs_gpio, 0);
 
 	/* Remember time of this transaction so we can honour the bus delay */
 	if (pdata->deactivate_delay_us)
@@ -288,6 +314,10 @@ static int exynos_spi_probe(struct udevice *bus)
 	priv->last_transaction_us = timer_get_us();
 	priv->freq = plat->frequency;
 	priv->periph_id = plat->periph_id;
+
+	/* Optional GPIO chip selects; requested inactive */
+	gpio_request_list_by_name(bus, "cs-gpios", priv->cs_gpios,
+				  EXYNOS_SPI_MAX_CS, GPIOD_IS_OUT);
 
 	return 0;
 }
