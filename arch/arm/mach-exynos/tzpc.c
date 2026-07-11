@@ -19,7 +19,7 @@ void tzpc_init(void)
 
 	if (cpu_is_exynos5())
 		end = start + ((EXYNOS5_NR_TZPC_BANKS - 1) * TZPC_BASE_OFFSET);
-	else if (cpu_is_exynos4())
+	else if (cpu_is_exynos4_compat())
 		end = start + ((EXYNOS4_NR_TZPC_BANKS - 1) * TZPC_BASE_OFFSET);
 
 	for (addr = start; addr <= end; addr += TZPC_BASE_OFFSET) {
