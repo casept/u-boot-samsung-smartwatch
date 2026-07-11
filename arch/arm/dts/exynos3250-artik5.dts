@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0+
 
 /dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
 #include "exynos3250.dtsi"
 / {
 	compatible = "samsung,artik5", "samsung,exynos3250", "samsung,exynos3";
@@ -43,4 +44,16 @@
 
 &usbphy {
 	status = "okay";
+};
+
+&spi_0 {
+	status = "okay";
+	cs-gpios = <&gpx3 4 GPIO_ACTIVE_LOW>;
+
+	ethernet@0 {
+		compatible = "asix,ax88796c";
+		reg = <0x0>;
+		spi-max-frequency = <40000000>;
+		reset-gpios = <&gpe0 2 GPIO_ACTIVE_LOW>;
+	};
 };
