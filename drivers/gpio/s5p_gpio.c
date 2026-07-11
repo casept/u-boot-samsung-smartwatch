@@ -322,7 +322,7 @@ static int gpio_exynos_bind(struct udevice *parent)
 	     node = fdt_next_subnode(blob, node)) {
 		struct exynos_gpio_plat *plat;
 		struct udevice *dev;
-		fdt_addr_t reg;
+		u32 reg;
 		int ret;
 
 		if (!fdtdec_get_bool(blob, node, "gpio-controller"))
@@ -337,8 +337,14 @@ static int gpio_exynos_bind(struct udevice *parent)
 		if (ret)
 			return ret;
 
-		reg = dev_read_addr(dev);
-		if (reg != FDT_ADDR_T_NONE)
+		/*
+		 * An optional bank "reg" is a raw offset from the
+		 * controller base; banks without one follow their
+		 * predecessor contiguously.  Read the cell directly:
+		 * regular address translation would fail (no ranges).
+		 */
+		if (!ofnode_read_u32_index(offset_to_ofnode(node), "reg", 0,
+					   &reg))
 			bank = (struct s5p_gpio_bank *)((ulong)base + reg);
 
 		debug("dev at %p: %s\n", bank, plat->bank_name);
@@ -351,6 +357,7 @@ static int gpio_exynos_bind(struct udevice *parent)
 static const struct udevice_id exynos_gpio_ids[] = {
 	{ .compatible = "samsung,s5pc100-pinctrl" },
 	{ .compatible = "samsung,s5pc110-pinctrl" },
+	{ .compatible = "samsung,exynos3250-pinctrl" },
 	{ .compatible = "samsung,exynos4210-pinctrl" },
 	{ .compatible = "samsung,exynos4x12-pinctrl" },
 	{ .compatible = "samsung,exynos5250-pinctrl" },
