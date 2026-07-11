@@ -78,4 +78,29 @@
 		samsung,dw-mshc-sdr-timing = <0 1>;
 		samsung,dw-mshc-ddr-timing = <1 2>;
 	};
+
+	/* FIXME: Again, missing clocks etc. */
+
+	pmu_system_controller: syscon@10020000 {
+		compatible = "samsung,exynos3250-pmu", "syscon";
+		reg = <0x10020000 0x4000>;
+	};
+
+	usb: usb@12480000 {
+		compatible = "snps,dwc2";
+		reg = <0x12480000 0x20000>;
+		phys = <&usbphy 0>;
+		phy-names = "usb2-phy";
+		dr_mode = "peripheral";
+		status = "disabled";
+	};
+
+	usbphy: usb-phy@125b0000 {
+		compatible = "samsung,exynos3250-usb2-phy";
+		reg = <0x125b0000 0x100>;
+		samsung,pmureg-phandle = <&pmu_system_controller>;
+		#phy-cells = <1>;
+		status = "disabled";
+	};
+
 };

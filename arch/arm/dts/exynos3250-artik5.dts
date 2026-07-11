@@ -36,3 +36,11 @@
 	status = "okay";
 	index = <1>;
 };
+
+&usb {
+	status = "okay";
+};
+
+&usbphy {
+	status = "okay";
+};

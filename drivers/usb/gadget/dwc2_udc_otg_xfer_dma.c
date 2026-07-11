@@ -553,22 +553,18 @@ static int dwc2_udc_irq(int irq, void *_dev)
 			"\tReset interrupt - (GOTGCTL):0x%x\n", usb_status);
 		writel(GINTSTS_USBRST, &reg->global_regs.gintsts);
 
+		/*
+		 * Re-arm EP0 to accept SETUP packets.  Unlike the original
+		 * code which called reconfig_usbd() (and therefore a full
+		 * dwc2_core_reset + FIFO flush) on every other reset, we keep
+		 * the controller configuration from udc_enable() intact and
+		 * only re-enable EP0 reception.  The core reset was racing
+		 * with the host's SETUP transfer, causing the device to get
+		 * stuck in an endless reset loop.
+		 */
 		if (usb_status & (GOTGCTL_ASESVLD | GOTGCTL_BSESVLD)) {
-			if (reset_available) {
-				debug_cond(DEBUG_ISR,
-					"\t\tOTG core got reset (%d)!!\n",
-					reset_available);
-				reconfig_usbd(dev);
-				dev->ep0state = WAIT_FOR_SETUP;
-				reset_available = 0;
-				dwc2_udc_pre_setup();
-			} else
-				reset_available = 1;
-
-		} else {
-			reset_available = 1;
-			debug_cond(DEBUG_ISR,
-				   "\t\tRESET handling skipped\n");
+			dev->ep0state = WAIT_FOR_SETUP;
+			dwc2_udc_pre_setup();
 		}
 	}
 
@@ -1347,10 +1343,6 @@ static void dwc2_ep0_setup(struct dwc2_udc *dev)
 			debug_cond(DEBUG_SETUP != 0,
 				   "%s: USB_REQ_SET_CONFIGURATION (%d)\n",
 				   __func__, usb_ctrl->wValue);
-
-			if (usb_ctrl->bRequestType == USB_RECIP_DEVICE)
-				reset_available = 1;
-
 			break;
 
 		case USB_REQ_GET_DESCRIPTOR:
@@ -1363,9 +1355,7 @@ static void dwc2_ep0_setup(struct dwc2_udc *dev)
 			debug_cond(DEBUG_SETUP != 0,
 				   "%s: *** USB_REQ_SET_INTERFACE (%d)\n",
 				   __func__, usb_ctrl->wValue);
-
-			if (usb_ctrl->bRequestType == USB_RECIP_INTERFACE)
-				reset_available = 1;
+			break;
 
 			break;
 
