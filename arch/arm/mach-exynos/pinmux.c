@@ -883,7 +883,7 @@ int exynos_pinmux_config(int peripheral, int flags)
 			return exynos5420_pinmux_config(peripheral, flags);
 		else if (proid_is_exynos5250())
 			return exynos5_pinmux_config(peripheral, flags);
-	} else if (cpu_is_exynos4()) {
+	} else if (cpu_is_exynos4_compat()) {
 		if (proid_is_exynos4412())
 			return exynos4x12_pinmux_config(peripheral, flags);
 		else
@@ -928,7 +928,7 @@ int pinmux_decode_periph_id(const void *blob, int node)
 {
 	if (cpu_is_exynos5())
 		return  exynos5_pinmux_decode_periph_id(blob, node);
-	else if (cpu_is_exynos4())
+	else if (cpu_is_exynos4_compat())
 		return  exynos4_pinmux_decode_periph_id(blob, node);
 
 	return PERIPH_ID_NONE;

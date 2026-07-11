@@ -1685,7 +1685,7 @@ unsigned long get_pll_clk(int pllreg)
 		if (proid_is_exynos542x())
 			return exynos542x_get_pll_clk(pllreg);
 		return exynos5_get_pll_clk(pllreg);
-	} else if (cpu_is_exynos4()) {
+	} else if (cpu_is_exynos4_compat()) {
 		if (proid_is_exynos4412())
 			return exynos4x12_get_pll_clk(pllreg);
 		return exynos4_get_pll_clk(pllreg);
@@ -1698,7 +1698,7 @@ unsigned long get_arm_clk(void)
 {
 	if (cpu_is_exynos5()) {
 		return exynos5_get_arm_clk();
-	} else if (cpu_is_exynos4()) {
+	} else if (cpu_is_exynos4_compat()) {
 		if (proid_is_exynos4412())
 			return exynos4x12_get_arm_clk();
 		return exynos4_get_arm_clk();
@@ -1711,7 +1711,7 @@ unsigned long get_i2c_clk(void)
 {
 	if (cpu_is_exynos5())
 		return clock_get_periph_rate(PERIPH_ID_I2C0);
-	else if (cpu_is_exynos4())
+	else if (cpu_is_exynos4_compat())
 		return exynos4_get_i2c_clk();
 
 	return 0;
@@ -1721,7 +1721,7 @@ unsigned long get_pwm_clk(void)
 {
 	if (cpu_is_exynos5()) {
 		return clock_get_periph_rate(PERIPH_ID_PWM0);
-	} else if (cpu_is_exynos4()) {
+	} else if (cpu_is_exynos4_compat()) {
 		if (proid_is_exynos4412())
 			return exynos4x12_get_pwm_clk();
 		return exynos4_get_pwm_clk();
@@ -1754,7 +1754,7 @@ unsigned long get_uart_clk(int dev_index)
 
 	if (cpu_is_exynos5()) {
 		return clock_get_periph_rate(id);
-	} else if (cpu_is_exynos4()) {
+	} else if (cpu_is_exynos4_compat()) {
 		if (proid_is_exynos4412())
 			return exynos4x12_get_uart_clk(dev_index);
 		return exynos4_get_uart_clk(dev_index);
@@ -1767,7 +1767,7 @@ unsigned long get_mmc_clk(int dev_index)
 {
 	enum periph_id id;
 
-	if (cpu_is_exynos4())
+	if (cpu_is_exynos4_compat())
 		return exynos4_get_mmc_clk(dev_index);
 
 	switch (dev_index) {
@@ -1802,14 +1802,14 @@ void set_mmc_clk(int dev_index, unsigned int div)
 			exynos5420_set_mmc_clk(dev_index, div);
 		else
 			exynos5_set_mmc_clk(dev_index, div);
-	} else if (cpu_is_exynos4()) {
+	} else if (cpu_is_exynos4_compat()) {
 		exynos4_set_mmc_clk(dev_index, div);
 	}
 }
 
 unsigned long get_lcd_clk(void)
 {
-	if (cpu_is_exynos4()) {
+	if (cpu_is_exynos4_compat()) {
 		return exynos4_get_lcd_clk();
 	} else if (cpu_is_exynos5()) {
 		if (proid_is_exynos5420())
@@ -1825,7 +1825,7 @@ unsigned long get_lcd_clk(void)
 
 void set_lcd_clk(void)
 {
-	if (cpu_is_exynos4()) {
+	if (cpu_is_exynos4_compat()) {
 		exynos4_set_lcd_clk();
 	} else if (cpu_is_exynos5()) {
 		if (proid_is_exynos5250())
@@ -1839,7 +1839,7 @@ void set_lcd_clk(void)
 
 void set_mipi_clk(void)
 {
-	if (cpu_is_exynos4())
+	if (cpu_is_exynos4_compat())
 		exynos4_set_mipi_clk();
 }
 

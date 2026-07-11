@@ -163,7 +163,7 @@ static void setup_usb_phy(struct exynos_usb_phy *usb)
 
 	if (cpu_is_exynos5())
 		exynos5_setup_usb_phy(usb);
-	else if (cpu_is_exynos4())
+	else if (cpu_is_exynos4_compat())
 		if (proid_is_exynos4412())
 			exynos4412_setup_usb_phy((struct exynos4412_usb_phy *)
 						 usb);
@@ -203,7 +203,7 @@ static void reset_usb_phy(struct exynos_usb_phy *usb)
 {
 	if (cpu_is_exynos5())
 		exynos5_reset_usb_phy(usb);
-	else if (cpu_is_exynos4())
+	else if (cpu_is_exynos4_compat())
 		if (proid_is_exynos4412())
 			exynos4412_reset_usb_phy((struct exynos4412_usb_phy *)
 						 usb);

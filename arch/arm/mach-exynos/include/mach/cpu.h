@@ -256,13 +256,19 @@ static inline int notrace cpu_is_##type(void)		\
 	return (s5p_cpu_id >> 12) == id;		\
 }
 
-/*
- * FIXME: Doing it like this breaks other exynos4 SoCs.
- * exynos3250 is like exynos4, but it's ID is 0x3.
- */
-// IS_SAMSUNG_TYPE(exynos4, 0x4)
-IS_SAMSUNG_TYPE(exynos4, 0x3)
+IS_SAMSUNG_TYPE(exynos3, 0x3)
+IS_SAMSUNG_TYPE(exynos4, 0x4)
 IS_SAMSUNG_TYPE(exynos5, 0x5)
+
+/*
+ * The exynos3250 reuses the exynos4 peripheral block layout (base
+ * addresses, clock controller, GPIO banks), so most code paths that
+ * handle exynos4 apply to it as well.
+ */
+static inline int notrace cpu_is_exynos4_compat(void)
+{
+	return cpu_is_exynos4() || cpu_is_exynos3();
+}
 
 #define IS_EXYNOS_TYPE(type, id)			\
 static inline int notrace				\
@@ -284,7 +290,7 @@ IS_EXYNOS_TYPE(exynos5422, 0x5422)
 static inline unsigned long notrace				\
 	samsung_get_base_##device(void) \
 {								\
-	if (cpu_is_exynos4()) {				\
+	if (cpu_is_exynos4_compat()) {				\
 		if (proid_is_exynos4412())			\
 			return EXYNOS4X12_##base;		\
 		return EXYNOS4_##base;				\

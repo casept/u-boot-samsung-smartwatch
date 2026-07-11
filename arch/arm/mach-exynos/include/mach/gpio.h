@@ -1404,7 +1404,7 @@ static inline struct gpio_info *get_gpio_data(void)
 			return exynos5420_gpio_data;
 		else
 			return exynos5_gpio_data;
-	} else if (cpu_is_exynos4()) {
+	} else if (cpu_is_exynos4_compat()) {
 		if (proid_is_exynos4412())
 			return exynos4x12_gpio_data;
 		else
@@ -1421,7 +1421,7 @@ static inline unsigned int get_bank_num(void)
 			return EXYNOS5420_GPIO_NUM_PARTS;
 		else
 			return EXYNOS5_GPIO_NUM_PARTS;
-	} else if (cpu_is_exynos4()) {
+	} else if (cpu_is_exynos4_compat()) {
 		if (proid_is_exynos4412())
 			return EXYNOS4X12_GPIO_NUM_PARTS;
 		else

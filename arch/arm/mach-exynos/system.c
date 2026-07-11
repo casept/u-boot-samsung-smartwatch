@@ -63,7 +63,7 @@ static void exynos5_set_system_display(void)
 
 void set_system_display_ctrl(void)
 {
-	if (cpu_is_exynos4())
+	if (cpu_is_exynos4_compat())
 		exynos4_set_system_display();
 	else
 		exynos5_set_system_display();

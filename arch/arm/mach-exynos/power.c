@@ -31,7 +31,7 @@ static void exynos4_mipi_phy_control(unsigned int dev_index,
 
 void set_mipi_phy_ctrl(unsigned int dev_index, unsigned int enable)
 {
-	if (cpu_is_exynos4())
+	if (cpu_is_exynos4_compat())
 		exynos4_mipi_phy_control(dev_index, enable);
 }
 
@@ -79,7 +79,7 @@ void set_usbhost_phy_ctrl(unsigned int enable)
 {
 	if (cpu_is_exynos5())
 		exynos5_set_usbhost_phy_ctrl(enable);
-	else if (cpu_is_exynos4())
+	else if (cpu_is_exynos4_compat())
 		if (proid_is_exynos4412())
 			exynos4412_set_usbhost_phy_ctrl(enable);
 }
