@@ -22,6 +22,24 @@
 		u-boot,dm-pre-reloc;
 	};
 
+	/*
+	 * The eMMC rail is PMIC LDO12, hardware-enabled by GPK0-2 (the
+	 * SD0_CD pad): Linux models this with samsung,ext-control-gpios
+	 * on the ldo12 PMIC regulator. We have no PMIC driver and none
+	 * is needed - the rail simply follows the pin - so model it as
+	 * a GPIO-controlled fixed regulator instead. On an SD cold boot
+	 * BootROM leaves GPK0-2 at reset default and the eMMC would
+	 * otherwise stay unpowered.
+	 */
+	ldo12: regulator-vldo12 {
+		compatible = "regulator-fixed";
+		regulator-name = "VLDO12_2.8V";
+		regulator-min-microvolt = <2800000>;
+		regulator-max-microvolt = <2800000>;
+		gpio = <&gpk0 2 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <5000>;
+	};
 };
 
 &fin_pll {
@@ -31,6 +49,7 @@
 &mshc_0 {
 	status = "okay";
 	index = <0>;
+	vmmc-supply = <&ldo12>;
 	/*
 	 * No fast-mode properties on purpose, matching the Linux artik5
 	 * DT (which caps this board at 100 MHz). Empirically:
