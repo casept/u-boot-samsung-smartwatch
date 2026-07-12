@@ -681,13 +681,14 @@ static int acm_stdio_start(struct stdio_dev *dev)
 	else
 		return -ENODEV;
 
-	while (!acm_connected(dev)) {
-		if (ctrlc())
-			return -ECANCELED;
-
-		schedule();
-	}
-
+	/*
+	 * Do not wait for the host to connect: tstc()/putc() already
+	 * handle the not-connected state (RX polls the UDC, TX buffers),
+	 * so the console simply becomes live once a host enumerates the
+	 * gadget and opens the port. Blocking here would hang the boot
+	 * on headless systems where usbacm is in the default stdin and
+	 * no USB host is attached.
+	 */
 	return 0;
 }
 
