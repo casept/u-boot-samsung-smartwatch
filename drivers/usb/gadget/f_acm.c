@@ -16,6 +16,7 @@
 #include <malloc.h>
 #include <memalign.h>
 #include <stdio_dev.h>
+#include <time.h>
 #include <version.h>
 #include <watchdog.h>
 
@@ -497,6 +498,7 @@ static struct usb_gadget_strings *acm_strings[] = {
 
 static void __acm_tx(struct f_acm *f_acm)
 {
+	ulong start = get_timer(0);
 	int len, ret;
 
 	do {
@@ -505,8 +507,26 @@ static void __acm_tx(struct f_acm *f_acm)
 		if (!(f_acm->handshake_bits & ACM_CTRL_DTR))
 			break;
 
-		if (!f_acm->tx_on)
+		if (!f_acm->tx_on) {
+			/*
+			 * The host asserted DTR but stopped draining the IN
+			 * endpoint - e.g. it went away without closing the
+			 * port. Don't spin forever (this would wedge the
+			 * console when usbacm is one of the stdio devices):
+			 * reclaim the stuck request - leaving it pending
+			 * hangs the UDC teardown in g_dnl_unregister() later
+			 * - and drop the handshake state. The host
+			 * re-establishes it with SET_CONTROL_LINE_STATE
+			 * when it reopens the port.
+			 */
+			if (get_timer(start) > 500) {
+				usb_ep_dequeue(f_acm->ep_in, f_acm->req_in);
+				f_acm->tx_on = true;
+				f_acm->handshake_bits &= ~ACM_CTRL_DTR;
+				break;
+			}
 			continue;
+		}
 
 		len = buf_pop(&f_acm->tx_buf, f_acm->req_in->buf, REQ_SIZE_MAX);
 		if (!len)
@@ -519,6 +539,7 @@ static void __acm_tx(struct f_acm *f_acm)
 			break;
 
 		f_acm->tx_on = false;
+		start = get_timer(0);
 
 		/* Do not reset the watchdog, if TX is stuck there is probably
 		 * a real issue.
@@ -672,9 +693,21 @@ static int acm_stdio_start(struct stdio_dev *dev)
 
 static int acm_stdio_stop(struct stdio_dev *dev)
 {
+	struct f_acm *f_acm = stdio_to_acm(dev);
+
+	/*
+	 * Reclaim any in-flight TX request first: tearing down the UDC
+	 * with a request still pending on the IN endpoint hangs the
+	 * endpoint flush in the gadget driver.
+	 */
+	if (f_acm && !f_acm->tx_on) {
+		usb_ep_dequeue(f_acm->ep_in, f_acm->req_in);
+		f_acm->tx_on = true;
+	}
+	dev->priv = NULL;
+
 	g_dnl_unregister();
 	g_dnl_clear_detach();
-	dev->priv = NULL;
 
 	return 0;
 }
