@@ -122,6 +122,16 @@ static int exynos_dwmmc_set_sclk(struct dwmci_host *host, unsigned long rate)
 	unsigned long sclk;
 	unsigned int div;
 
+	/*
+	 * get_mmc_clk() returns the current *divided* SDCLKIN rate, but
+	 * set_mmc_clk() programs a divider that applies to the undivided
+	 * source clock. Computing the divider from the divided rate uses
+	 * the wrong base and compounds across calls (each mode change
+	 * inherits the previous divider), silently over- or underclocking
+	 * the card. Reset the divider first so get_mmc_clk() returns the
+	 * source rate.
+	 */
+	set_mmc_clk(host->dev_index, 0);
 	err = exynos_dwmmc_get_sclk(host, &sclk);
 	if (err)
 		return err;
