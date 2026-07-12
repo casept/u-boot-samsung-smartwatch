@@ -31,6 +31,16 @@
 &mshc_0 {
 	status = "okay";
 	index = <0>;
+	/*
+	 * No fast-mode properties on purpose, matching the Linux artik5
+	 * DT (which caps this board at 100 MHz). Empirically:
+	 * - HS400 fails outright (driver lacks DQS/DLL read-strobe
+	 *   support) and wedges the card;
+	 * - HS200 tunes and mostly works, but a read-only stress test
+	 *   caught silently corrupted 2 MiB reads (~1 per 32 MiB) -
+	 *   unacceptable for a boot loader;
+	 * - HS 52 MHz is stable (stress-tested).
+	 */
 };
 
 &mshc_2 {

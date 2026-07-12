@@ -440,8 +440,20 @@ static int exynos_dwmmc_probe(struct udevice *dev)
 
 	host->name = dev->name;
 	host->board_init = exynos_dwmci_board_init;
-	host->caps = MMC_MODE_DDR_52MHz | MMC_MODE_HS200 | MMC_MODE_HS400 |
-		     UHS_CAPS;
+	/*
+	 * Advertise the fast modes only when the DT claims them, like
+	 * Linux does. Blindly attempting HS200/HS400 is destructive on
+	 * boards that can't run them: the card gets switched to the new
+	 * timing before tuning fails, and without vmmc control there is
+	 * no way to power-cycle it back into a reachable state.
+	 */
+	host->caps = 0;
+	if (dev_read_bool(dev, "mmc-ddr-1_8v"))
+		host->caps |= MMC_MODE_DDR_52MHz;
+	if (dev_read_bool(dev, "mmc-hs200-1_8v"))
+		host->caps |= MMC_MODE_HS200;
+	if (dev_read_bool(dev, "mmc-hs400-1_8v"))
+		host->caps |= MMC_MODE_HS400 | MMC_MODE_HS200;
 	host->clksel = exynos_dwmci_clksel;
 	host->get_mmc_clk = exynos_dwmci_get_clk;
 
