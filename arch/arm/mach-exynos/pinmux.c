@@ -643,10 +643,9 @@ static int exynos4_mmc_config(int peripheral, int flags)
 		return -1;
 	}
 	for (i = start; i < (start + 7); i++) {
-		if (i == (start + 2))
-			continue;
 		gpio_cfg_pin(i,  func);
-		gpio_set_pull(i, S5P_GPIO_PULL_NONE);
+		gpio_set_pull(i, (i >= start + 2) ? S5P_GPIO_PULL_UP
+						  : S5P_GPIO_PULL_NONE);
 		gpio_set_drv(i, S5P_GPIO_DRV_4X);
 	}
 	/* SDMMC2 do not use 8bit mode at exynos4 */
