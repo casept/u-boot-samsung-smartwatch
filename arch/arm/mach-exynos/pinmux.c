@@ -618,14 +618,26 @@ static void exynos4_i2c_config(int peripheral, int flags)
 static int exynos4_mmc_config(int peripheral, int flags)
 {
 	int i, start = 0, start_ext = 0;
-	unsigned int func, ext_func;
+	unsigned int func, ext_func, ext_pull = S5P_GPIO_PULL_NONE;
 
 	switch (peripheral) {
 	case PERIPH_ID_SDMMC0:
 		start = EXYNOS4_GPIO_K00;
-		start_ext = EXYNOS4_GPIO_K13;
 		func = S5P_GPIO_FUNC(0x2);
-		ext_func = S5P_GPIO_FUNC(0x3);
+		if (proid_is_exynos3250()) {
+			/*
+			 * On the exynos3250 the upper four eMMC data lines
+			 * are GPL0-0..3 in function 2 with pull-ups (see
+			 * sd0_bus8 in the Linux exynos3250-pinctrl.dtsi),
+			 * not GPK1-3..6 in function 3 as on the exynos4210.
+			 */
+			start_ext = EXYNOS4_GPIO_L00;
+			ext_func = S5P_GPIO_FUNC(0x2);
+			ext_pull = S5P_GPIO_PULL_UP;
+		} else {
+			start_ext = EXYNOS4_GPIO_K13;
+			ext_func = S5P_GPIO_FUNC(0x3);
+		}
 		break;
 	case PERIPH_ID_SDMMC2:
 		start = EXYNOS4_GPIO_K20;
@@ -648,11 +660,17 @@ static int exynos4_mmc_config(int peripheral, int flags)
 						  : S5P_GPIO_PULL_NONE);
 		gpio_set_drv(i, S5P_GPIO_DRV_4X);
 	}
+	/*
+	 * GPK0-7 (sd0_rdqs) is deliberately not muxed: the Linux artik5
+	 * DT leaves it out of the eMMC pinctrl, and HS400 (the only mode
+	 * that would use the read strobe) does not work with this driver
+	 * anyway - it lacks the DQS/DLL setup.
+	 */
 	/* SDMMC2 do not use 8bit mode at exynos4 */
 	if (flags & PINMUX_FLAG_8BIT_MODE) {
 		for (i = start_ext; i < (start_ext + 4); i++) {
 			gpio_cfg_pin(i,  ext_func);
-			gpio_set_pull(i, S5P_GPIO_PULL_NONE);
+			gpio_set_pull(i, ext_pull);
 			gpio_set_drv(i, S5P_GPIO_DRV_4X);
 		}
 	}
