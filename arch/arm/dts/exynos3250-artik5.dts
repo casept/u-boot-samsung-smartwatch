@@ -45,7 +45,16 @@
 
 &mshc_2 {
 	status = "okay";
-	index = <1>;
+	/*
+	 * Must be the hardware channel number (SDMMC2): index feeds
+	 * get/set_mmc_clk, which picks the CLK_DIV_FSYS1/2 divider
+	 * field from it. With index = <1> the driver programs the
+	 * (unused) MMC1 divider and the SD card runs at whatever rate
+	 * BL2 left in the MMC2 field - far above the requested 50 MHz,
+	 * giving silently corrupted large reads. U-boot device
+	 * numbering comes from the mmc1 alias, not from this.
+	 */
+	index = <2>;
 };
 
 &usb {
