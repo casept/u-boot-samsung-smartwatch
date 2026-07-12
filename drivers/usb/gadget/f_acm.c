@@ -674,6 +674,12 @@ int drv_usbacm_init(void)
 {
 	struct stdio_dev stdio;
 
+	/*
+	 * Zero the template: stdio_register_dev() copies the whole
+	 * struct, and any field left uninitialized here (e.g. .flush)
+	 * becomes a wild pointer that the console will happily call.
+	 */
+	memset(&stdio, 0, sizeof(stdio));
 	strcpy(stdio.name, "usbacm");
 	stdio.flags = DEV_FLAGS_INPUT | DEV_FLAGS_OUTPUT;
 	stdio.tstc = acm_stdio_tstc;
