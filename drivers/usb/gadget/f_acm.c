@@ -293,6 +293,15 @@ static void acm_rx_complete(struct usb_ep *ep, struct usb_request *req)
 {
 	struct f_acm *f_acm = req->context;
 
+	/*
+	 * Do not requeue on error - in particular not on -ESHUTDOWN,
+	 * with which ep_disable() completes pending requests during
+	 * teardown: requeueing there makes the endpoint's nuke() loop
+	 * forever and hangs g_dnl_unregister().
+	 */
+	if (req->status)
+		return;
+
 	buf_push(&f_acm->rx_buf, req->buf, req->actual);
 
 	/* Queue RX req again */
