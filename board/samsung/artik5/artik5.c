@@ -45,30 +45,9 @@
 #define SCLK_SPI0_GATE		BIT(6)
 #define IP_SPI0_GATE		BIT(16)
 
-/*
- * The eMMC power rail (PMIC LDO12, VLDO12_2.8V) is hardware-gated by
- * GPK0 pin 2 (the SD0_CD pad): the Linux DT marks ldo12 with
- * samsung,ext-control-gpios = <&gpk0 2 GPIO_ACTIVE_HIGH>.
- *
- * When booting from eMMC the BootROM muxes the GPK0 bank (pull-up on
- * pin 2 included) and the rail comes up on its own, but on an SD cold
- * boot GPK0-2 is left at its reset default and the eMMC stays
- * unpowered. Drive the pin high explicitly; raw register access
- * because DM GPIO is not available this early.
- */
-#define GPK0_BASE		0x11000040
-#define GPK0_CON		(GPK0_BASE + 0x0)
-#define GPK0_DAT		(GPK0_BASE + 0x4)
-#define GPK0_CON_PIN2_MASK	(0xF << 8)
-#define GPK0_CON_PIN2_OUTPUT	(0x1 << 8)
-#define GPK0_DAT_PIN2		BIT(2)
-
 #ifdef CONFIG_BOARD_EARLY_INIT_F
 int exynos_early_init_f(void)
 {
-	/* Power up the eMMC rail: LDO12 enable follows GPK0-2 */
-	setbits_le32(GPK0_DAT, GPK0_DAT_PIN2);
-	clrsetbits_le32(GPK0_CON, GPK0_CON_PIN2_MASK, GPK0_CON_PIN2_OUTPUT);
 
 	/* Select div_mpll_pre as source for MMC0/1/2 */
 	clrsetbits_le32(CMU_SRC_FSYS, MMC_SEL_MASK, MMC_SEL_MPLL_PRE);
