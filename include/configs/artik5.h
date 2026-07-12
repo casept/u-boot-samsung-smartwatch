@@ -22,4 +22,15 @@
 #define CFG_SYS_INIT_RAM_ADDR (CFG_SYS_SDRAM_BASE)
 #define CFG_SYS_INIT_RAM_SIZE (SDRAM_BANK_SIZE)
 
+/*
+ * Console on both the UART and the USB CDC ACM gadget, for platforms
+ * where the UART pads are not easily accessible. With no USB host
+ * attached the ACM console waits at startup until the gadget is
+ * enumerated; a ctrl-c on the UART skips it for that boot.
+ */
+#define CFG_EXTRA_ENV_SETTINGS \
+	"stdin=serial,usbacm\0" \
+	"stdout=serial,usbacm\0" \
+	"stderr=serial,usbacm\0"
+
 #endif /* __CONFIG_H */
