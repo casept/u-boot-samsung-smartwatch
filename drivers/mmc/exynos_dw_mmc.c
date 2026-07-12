@@ -429,6 +429,13 @@ static int exynos_dwmmc_probe(struct udevice *dev)
 #ifdef CONFIG_CPU_V7A
 	int flag;
 
+	err = exynos_periph_clk_enable(host->dev_id);
+	if (err) {
+		printf("DWMMC%d: clock gates not enabled (%d)\n",
+		       host->dev_index, err);
+		return err;
+	}
+
 	flag = host->buswidth == 8 ? PINMUX_FLAG_8BIT_MODE : PINMUX_FLAG_NONE;
 	err = exynos_pinmux_config(host->dev_id, flag);
 	if (err) {

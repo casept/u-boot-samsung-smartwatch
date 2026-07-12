@@ -5,6 +5,7 @@
  */
 
 #include <clock_legacy.h>
+#include <errno.h>
 #include <log.h>
 #include <time.h>
 #include <mach/cpu.h>
@@ -1957,5 +1958,48 @@ int set_epll_clk(unsigned long rate)
 	if (cpu_is_exynos5())
 		return exynos5_set_epll_clk(rate);
 
+	return 0;
+}
+
+/*
+ * exynos3250: BL1/BL2 only bring up the PLLs and DRAM on a cold boot;
+ * the peripheral clock gates and source muxes are left at their reset
+ * defaults, so they must be set up before a peripheral can be used.
+ * Register layout from Linux clk-exynos3250.c.
+ */
+static int exynos3_periph_clk_enable(int periph_id)
+{
+	struct exynos4_clock *clk =
+		(struct exynos4_clock *)samsung_get_base_clock();
+	int ch;
+
+	switch (periph_id) {
+	case PERIPH_ID_SDMMC0:
+	case PERIPH_ID_SDMMC1:
+	case PERIPH_ID_SDMMC2:
+		ch = periph_id - PERIPH_ID_SDMMC0;
+		/* SRC_FSYS: mux input 6 = div_mpll_pre */
+		clrsetbits_le32(&clk->src_fsys, 0xf << (ch << 2),
+				0x6 << (ch << 2));
+		/* GATE_SCLK_FSYS: MMCn sclk gates at bits 0..2 */
+		setbits_le32(&clk->gate_sclk_fsys, 1 << ch);
+		/* GATE_IP_FSYS: SDMMCn bus gates at bits 5..7 */
+		setbits_le32(&clk->gate_ip_fsys, 1 << (5 + ch));
+		return 0;
+	case PERIPH_ID_SPI0:
+		setbits_le32(&clk->gate_sclk_peril, 1 << 6);
+		setbits_le32(&clk->gate_ip_peril, 1 << 16);
+		return 0;
+	default:
+		return -ENOSYS;
+	}
+}
+
+int exynos_periph_clk_enable(int periph_id)
+{
+	if (proid_is_exynos3250())
+		return exynos3_periph_clk_enable(periph_id);
+
+	/* Other SoCs inherit gate and mux state from earlier boot stages */
 	return 0;
 }

@@ -53,6 +53,17 @@ int set_epll_clk(unsigned long rate);
 int set_spi_clk(int periph_id, unsigned int rate);
 
 /**
+ * Enable the clock gates and select the source mux for a peripheral.
+ *
+ * Needed on SoCs where the boot blob leaves peripheral clocks at reset
+ * defaults (exynos3250); a no-op elsewhere.
+ *
+ * @param periph_id	Peripheral ID
+ * Return: 0 on success (or SoC where nothing is needed), -ve on error
+ */
+int exynos_periph_clk_enable(int periph_id);
+
+/**
  * get the clk frequency of the required peripheral
  *
  * @param peripheral	Peripheral id

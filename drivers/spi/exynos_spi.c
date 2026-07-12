@@ -315,6 +315,9 @@ static int exynos_spi_probe(struct udevice *bus)
 	priv->freq = plat->frequency;
 	priv->periph_id = plat->periph_id;
 
+	/* Best effort: a no-op on SoCs whose boot blob sets this up */
+	exynos_periph_clk_enable(priv->periph_id);
+
 	/* Optional GPIO chip selects; requested inactive */
 	gpio_request_list_by_name(bus, "cs-gpios", priv->cs_gpios,
 				  EXYNOS_SPI_MAX_CS, GPIOD_IS_OUT);
