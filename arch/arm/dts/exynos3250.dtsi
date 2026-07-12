@@ -37,12 +37,6 @@
 		interrupt-parent = <&gic>;
 	};
 
-	/*
-	 * FIXME:
-	 * eMMC is actually missing a bunch of stuff (clocks, pinmux etc.)
-	 * It only works because stock U-Boot runs first and sets it all up.
-	 */
-
 	mshc_0: mmc@12510000 {
 		compatible = "samsung,exynos-dwmmc";
 		#address-cells = <1>;
@@ -54,6 +48,7 @@
 		clock-frequency = <100000000>;
 		fifo-depth = <0x80>;
 		non-removable;
+		mmc-ddr-1_8v;
 		samsung,pre-init;
 		status = "disabled";
 		bus-width = <8>;
