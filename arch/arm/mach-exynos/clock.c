@@ -807,9 +807,8 @@ static unsigned long exynos4_get_mmc_clk(int dev_index)
 
 	if (sel == 0x6) {
 		sclk = get_pll_clk(MPLL);
-		unsigned long sclk = get_pll_clk(MPLL);
 		if (proid_is_exynos3250()) {
-			unsigned int mpll_ratio_pre = (readl(&clk->div_top) >> 28) && 0x3;
+			unsigned int mpll_ratio_pre = (readl(&clk->div_top) >> 28) & 0x3;
 			sclk = sclk / EXYNOS3250_MPLL_PRE_DIV / (mpll_ratio_pre + 1);
 		}
 	}
