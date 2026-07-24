@@ -991,6 +991,15 @@ config VIDEO_DW_MIPI_DSI
 	  rather requires a SoC-specific glue driver to call it), it
 	  can not be enabled from the configuration menu.
 
+config VIDEO_RINATO_SIMPLE
+	bool "Framebuffer driver for the Samsung rinato (Exynos3250) watch"
+	depends on VIDEO
+	help
+	  Inherits the display pipeline S-Boot leaves running on the rinato
+	  (Gear 2) watch - FIMD scanning a 320x320 XRGB8888 framebuffer into
+	  the S6E63J0X03 command-mode DSI panel - and issues a FIMD software
+	  trigger on each video sync so U-Boot's output reaches the panel.
+
 config VIDEO_SIMPLE
 	bool "Simple display driver for preconfigured display"
 	imply VIDEO_DAMAGE
