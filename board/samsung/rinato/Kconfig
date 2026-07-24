@@ -1,0 +1,12 @@
+if TARGET_RINATO
+
+config SYS_BOARD
+	default "rinato"
+
+config SYS_VENDOR
+	default "samsung"
+
+config SYS_CONFIG_NAME
+	default "rinato"
+
+endif
