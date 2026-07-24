@@ -1,0 +1,110 @@
+// SPDX-License-Identifier: GPL-2.0+
+
+/dts-v1/;
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/linux-event-codes.h>
+#include "exynos3250.dtsi"
+/ {
+	compatible = "samsung,rinato", "samsung,exynos3250", "samsung,exynos3";
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		power-key {
+			label = "power";
+			gpios = <&gpx2 7 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_POWER>;
+		};
+	};
+
+	aliases {
+		console = &uart1;
+		serial0 = &uart1;
+		mmc0 = &mshc_0;
+	};
+
+	chosen {
+		stdout-path = "/serial@13810000:115200n8";
+	};
+
+	uart1: serial@13810000 {
+		compatible = "samsung,exynos4210-uart";
+		reg = <0x13810000 0x100>;
+		u-boot,dm-pre-reloc;
+	};
+
+	memory@40000000 {
+		device_type = "memory";
+		reg = <0x40000000 0x1ff00000>;
+		u-boot,dm-pre-reloc;
+	};
+
+	/*
+	 * The eMMC rail is PMIC LDO12, hardware-enabled by GPK0-2 (the
+	 * SD0_CD pad): Linux models this with samsung,ext-control-gpios
+	 * on the ldo12 PMIC regulator. We have no PMIC driver and none
+	 * is needed - the rail simply follows the pin - so model it as
+	 * a GPIO-controlled fixed regulator instead.
+	 */
+	ldo12: regulator-vldo12 {
+		compatible = "regulator-fixed";
+		regulator-name = "VLDO12_2.8V";
+		regulator-min-microvolt = <2800000>;
+		regulator-max-microvolt = <2800000>;
+		gpio = <&gpk0 2 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		startup-delay-us = <5000>;
+	};
+
+	/*
+	 * MAX77836 MUIC lives on a GPIO-bitbanged I2C bus (gpd0-2/gpd0-3).
+	 * Its CONTROL1 register (0x0c) selects where the micro-USB D+/D-
+	 * pins are routed; S-Boot programs it to 0x09 (CTRL1_SW_USB) for
+	 * download mode.  U-Boot must do the same so the USB gadget can
+	 * enumerate on the host.
+	 */
+	/*
+	 * Framebuffer inherited from S-Boot: FIMD is left scanning this
+	 * region as a 320x320 XRGB8888 surface into the command-mode panel.
+	 */
+	framebuffer: framebuffer@48000000 {
+		compatible = "samsung,rinato-simple";
+		reg = <0x48000000 0x64000>;
+		width = <320>;
+		height = <320>;
+		format = "x8r8g8b8";
+	};
+
+	i2c_muic: i2c-gpio-muic {
+		compatible = "i2c-gpio";
+		sda-gpios = <&gpd0 2 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		scl-gpios = <&gpd0 3 (GPIO_ACTIVE_HIGH | GPIO_OPEN_DRAIN)>;
+		i2c-gpio,delay-us = <5>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		muic: muic@25 {
+			compatible = "maxim,max77836-muic";
+			reg = <0x25>;
+		};
+	};
+};
+
+&fin_pll {
+	clock-frequency = <24000000>;
+};
+
+&mshc_0 {
+	status = "okay";
+	index = <0>;
+	vmmc-supply = <&ldo12>;
+	/* HS 52 MHz only - fast modes are unstable on this controller. */
+};
+
+&usb {
+	status = "okay";
+};
+
+&usbphy {
+	status = "okay";
+};
