@@ -28,4 +28,14 @@ config EXTCON_MAX14526
 	  Maxim MAX14526. The MAX14526 MUIC is a USB port accessory
 	  detector and switch.
 
+config EXTCON_MAX77836
+	bool "Maxim MAX77836 EXTCON Support"
+	depends on DM_I2C
+	depends on EXTCON
+	help
+	  If you say yes here you get support for the MUIC device of
+	  Maxim MAX77836. The MAX77836 MUIC is a USB port accessory
+	  detector and switch. Currently, the driver is very minimal
+	  and only enables USB upon being probed.
+
 endmenu
