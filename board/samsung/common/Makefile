@@ -8,6 +8,7 @@ obj-$(CONFIG_MISC_COMMON) += misc.o
 
 ifndef CONFIG_XPL_BUILD
 obj-$(CONFIG_BOARD_COMMON)	+= board.o sromc.o
+obj-$(CONFIG_SAMSUNG_SBOOT_DEBUG) += sboot_debug.o
 ifdef CONFIG_EXYNOS5_DT
 obj-y += exynos5-dt.o
 obj-$(CONFIG_BOARD_TYPES) += exynos5-dt-types.o

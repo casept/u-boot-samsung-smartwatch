@@ -1,2 +1,44 @@
 config MISC_COMMON
 	bool
+
+config SAMSUNG_SBOOT_DEBUG
+	bool "Samsung S-Boot crash debugging"
+	depends on ARCH_EXYNOS
+	select EVENT
+	select PANIC_HANG
+	select SHOW_BOOT_PROGRESS
+	help
+	  For boards chainloaded from Samsung's S-Boot. Adds the "ramcon"
+	  output device, which keeps a copy of the console in a ring buffer in
+	  RAM that survives a warm reset and can be read back in upload mode.
+	  List it in stdout and stderr to use it. When U-Boot panics or hangs,
+	  it enters S-Boot's upload mode.
+
+config CMD_SBOOT_UPLOAD
+	bool "upload - reset into S-Boot's upload mode"
+	depends on SAMSUNG_SBOOT_DEBUG
+	help
+	  Adds the "upload" command, which resets into S-Boot's upload mode
+	  like a hang does. The RAM, including the RAM console, can then be
+	  read back with an upload mode client.
+
+config SAMSUNG_SBOOT_DEBUG_AREA
+	hex "S-Boot debug area"
+	depends on SAMSUNG_SBOOT_DEBUG
+	default 0x40000000
+	help
+	  Where S-Boot looks for the upload mode magic and the message to
+	  show in upload mode.
+
+config SAMSUNG_SBOOT_RAMCON_ADDR
+	hex "Address of the RAM console"
+	depends on SAMSUNG_SBOOT_DEBUG
+	default 0x46100000
+	help
+	  The default is the unused half of S-Boot's log area, which Linux
+	  doesn't map either.
+
+config SAMSUNG_SBOOT_RAMCON_SIZE
+	hex "Size of the RAM console"
+	depends on SAMSUNG_SBOOT_DEBUG
+	default 0x100000

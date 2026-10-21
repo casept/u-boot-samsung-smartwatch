@@ -22,9 +22,15 @@
 #define CFG_SYS_INIT_RAM_ADDR (CFG_SYS_SDRAM_BASE)
 #define CFG_SYS_INIT_RAM_SIZE (SDRAM_BANK_SIZE)
 
+#ifdef CONFIG_SAMSUNG_SBOOT_DEBUG
+#define RINATO_RAMCON ",ramcon"
+#else
+#define RINATO_RAMCON ""
+#endif
+
 #define CFG_EXTRA_ENV_SETTINGS \
 	"stdin=serial,usbacm\0" \
-	"stdout=serial,usbacm,vidconsole\0" \
-	"stderr=serial,usbacm,vidconsole\0"
+	"stdout=serial,usbacm,vidconsole" RINATO_RAMCON "\0" \
+	"stderr=serial,usbacm,vidconsole" RINATO_RAMCON "\0"
 
 #endif /* __CONFIG_RINATO_H */

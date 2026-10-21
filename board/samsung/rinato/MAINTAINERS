@@ -5,3 +5,4 @@ F:	board/samsung/rinato/
 F:	include/configs/rinato.h
 F:	configs/rinato_defconfig
 F:	arch/arm/dts/exynos3250-rinato.dts
+F:	board/samsung/common/sboot_debug.c
