@@ -84,6 +84,10 @@ config TARGET_ARTIK5
 	bool "EXYNOS3250 Artik5 board"
 	select EXYNOS3250
 
+config TARGET_RINATO
+	bool "EXYNOS3250 Rinato (Samsung Gear 2) board"
+	select EXYNOS3250
+
 endchoice
 endif
 
@@ -309,5 +313,6 @@ source "board/samsung/axy17lte/Kconfig"
 source "board/samsung/e850-96/Kconfig"
 source "board/samsung/exynos-mobile/Kconfig"
 source "board/samsung/artik5/Kconfig"
+source "board/samsung/rinato/Kconfig"
 
 endif
