@@ -30,7 +30,9 @@
 
 #define CFG_EXTRA_ENV_SETTINGS \
 	"stdin=serial,usbacm\0" \
-	"stdout=serial,usbacm,vidconsole" RINATO_RAMCON "\0" \
-	"stderr=serial,usbacm,vidconsole" RINATO_RAMCON "\0"
+	"stdout=serial,usbacm" RINATO_RAMCON "\0" \
+	"stderr=serial,usbacm" RINATO_RAMCON "\0" \
+	"splashimage=0x46200000\0" \
+	"splashpos=m,m\0"
 
 #endif /* __CONFIG_RINATO_H */

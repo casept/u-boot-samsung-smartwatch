@@ -4,3 +4,5 @@
 # Davids Paskevics <davids.paskevics@gmail.com>
 #
 obj-y += rinato.o
+obj-y += booting.bmp.o
+obj-y += fastboot.bmp.o

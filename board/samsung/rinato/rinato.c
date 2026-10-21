@@ -10,6 +10,7 @@
 #include <event.h>
 #include <linker_lists.h>
 #include <log.h>
+#include <mapmem.h>
 #include <stdio.h>
 #include <string.h>
 #include <sysreset.h>
@@ -130,3 +131,17 @@ static int rinato_power_key_init(void)
 }
 
 EVENT_SPY_SIMPLE(EVT_LAST_STAGE_INIT, rinato_power_key_init);
+
+extern u8 __splash_booting_begin[];
+extern u8 __splash_fastboot_begin[];
+
+/* For the boot script to show once it knows what it boots */
+static int rinato_splash_env(void)
+{
+	env_set_hex("booting_splash", map_to_sysmem(__splash_booting_begin));
+	env_set_hex("fastboot_splash", map_to_sysmem(__splash_fastboot_begin));
+
+	return 0;
+}
+
+EVENT_SPY_SIMPLE(EVT_LAST_STAGE_INIT, rinato_splash_env);
