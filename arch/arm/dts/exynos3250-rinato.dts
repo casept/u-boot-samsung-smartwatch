@@ -17,6 +17,13 @@
 		};
 	};
 
+	sysinfo {
+		compatible = "samsung,rinato-sysinfo";
+		/* Board revision straps, least significant bit first */
+		hwrev-gpios = <&gpe1 7 GPIO_ACTIVE_HIGH>, <&gpe2 0 GPIO_ACTIVE_HIGH>,
+			      <&gpe2 1 GPIO_ACTIVE_HIGH>, <&gpe2 2 GPIO_ACTIVE_HIGH>;
+	};
+
 	aliases {
 		console = &uart1;
 		serial0 = &uart1;

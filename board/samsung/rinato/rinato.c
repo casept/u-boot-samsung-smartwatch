@@ -5,6 +5,7 @@
 
 #include <button.h>
 #include <cyclic.h>
+#include <dm.h>
 #include <env.h>
 #include <errno.h>
 #include <event.h>
@@ -13,9 +14,12 @@
 #include <mapmem.h>
 #include <stdio.h>
 #include <string.h>
+#include <sysinfo.h>
 #include <sysreset.h>
 #include <time.h>
+#include <asm/gpio.h>
 #include <asm/io.h>
+#include <dm/device_compat.h>
 #include <linux/bitops.h>
 
 /* A press shorter than this is taken for a bounce */
@@ -145,3 +149,146 @@ static int rinato_splash_env(void)
 }
 
 EVENT_SPY_SIMPLE(EVT_LAST_STAGE_INIT, rinato_splash_env);
+
+/*
+ * The board revision is strapped on four GPIOs, which S-Boot reads after
+ * making them inputs without pulls, and hands to the kernel as the ATAG
+ * revision. It leaves them configured like that, so read them as they are.
+ * Revisions 8 and up are the Gear 2 Neo (SM-R381), the others the Gear 2
+ * (SM-R380).
+ */
+#define RINATO_HWREV_STRAPS	4
+#define RINATO_HWREV_NEO	8
+
+struct rinato_sysinfo_priv {
+	struct gpio_desc straps[RINATO_HWREV_STRAPS];
+	int hwrev;
+};
+
+/* The board names S-Boot uses for each revision */
+static const char *const rinato_revisions[] = {
+	[0] = "B2_BT Rev00A",
+	[1] = "SM-R380 Rev0.0",
+	[2] = "SM-R380 Rev0.0B",
+	[3] = "SM-R380 Rev0.1",
+	[4] = "SM-R380 Rev0.3",
+	[5] = "SM-R380 Rev0.4",
+	[6] = "SM-R380 Rev0.5",
+	[8] = "SM-R381 REV0.0",
+	[9] = "SM-R381 REV0.1",
+	[10] = "SM-R381 REV0.2",
+	[11] = "SM-R381 REV0.3",
+};
+
+static int rinato_sysinfo_detect(struct udevice *dev)
+{
+	struct rinato_sysinfo_priv *priv = dev_get_priv(dev);
+	int ret;
+
+	/*
+	 * S-Boot also turns revision 1 into 5 when gpm4-3 reads high while
+	 * the camera I/O supply is on. Only early prototypes report 1, so
+	 * that isn't done here.
+	 */
+	ret = dm_gpio_get_values_as_int(priv->straps, RINATO_HWREV_STRAPS);
+	if (ret < 0)
+		return ret;
+
+	priv->hwrev = ret;
+
+	return 0;
+}
+
+static int rinato_sysinfo_get_int(struct udevice *dev, int id, int *val)
+{
+	struct rinato_sysinfo_priv *priv = dev_get_priv(dev);
+
+	if (id != SYSID_BOARD_MODEL)
+		return -ENOENT;
+
+	*val = priv->hwrev;
+
+	return 0;
+}
+
+static int rinato_sysinfo_get_str(struct udevice *dev, int id, size_t size,
+				  char *val)
+{
+	struct rinato_sysinfo_priv *priv = dev_get_priv(dev);
+	const char *name = NULL;
+
+	switch (id) {
+	case SYSID_BOARD_MANUFACTURER:
+		strlcpy(val, "Samsung", size);
+		return 0;
+	case SYSID_BOARD_MODEL:
+		if (priv->hwrev < ARRAY_SIZE(rinato_revisions))
+			name = rinato_revisions[priv->hwrev];
+		snprintf(val, size, "Samsung Gear 2%s (%s)",
+			 priv->hwrev >= RINATO_HWREV_NEO ? " Neo" : "",
+			 name ?: "unknown revision");
+		return 0;
+	default:
+		return -ENOENT;
+	}
+}
+
+static const struct sysinfo_ops rinato_sysinfo_ops = {
+	.detect = rinato_sysinfo_detect,
+	.get_int = rinato_sysinfo_get_int,
+	.get_str = rinato_sysinfo_get_str,
+};
+
+static int rinato_sysinfo_probe(struct udevice *dev)
+{
+	struct rinato_sysinfo_priv *priv = dev_get_priv(dev);
+	int ret;
+
+	ret = gpio_request_list_by_name(dev, "hwrev-gpios", priv->straps,
+					RINATO_HWREV_STRAPS, GPIOD_IS_IN);
+	if (ret != RINATO_HWREV_STRAPS) {
+		dev_err(dev, "need %d revision straps, got %d\n",
+			RINATO_HWREV_STRAPS, ret);
+		return ret < 0 ? ret : -EINVAL;
+	}
+
+	return 0;
+}
+
+static const struct udevice_id rinato_sysinfo_ids[] = {
+	{ .compatible = "samsung,rinato-sysinfo" },
+	{ }
+};
+
+U_BOOT_DRIVER(rinato_sysinfo) = {
+	.name		= "rinato_sysinfo",
+	.id		= UCLASS_SYSINFO,
+	.of_match	= rinato_sysinfo_ids,
+	.ops		= &rinato_sysinfo_ops,
+	.priv_auto	= sizeof(struct rinato_sysinfo_priv),
+	.probe		= rinato_sysinfo_probe,
+};
+
+/* For scripts in the environment, e.g. to pick the device tree */
+static int rinato_hwrev_env(void)
+{
+	struct udevice *dev;
+	int hwrev, ret;
+
+	ret = sysinfo_get(&dev);
+	if (!ret)
+		ret = sysinfo_detect(dev);
+	if (!ret)
+		ret = sysinfo_get_int(dev, SYSID_BOARD_MODEL, &hwrev);
+	if (ret) {
+		log_warning("Can't read the board revision: %d\n", ret);
+		return 0;
+	}
+
+	env_set_ulong("board_rev", hwrev);
+	env_set("board_model", hwrev >= RINATO_HWREV_NEO ? "SM-R381" : "SM-R380");
+
+	return 0;
+}
+
+EVENT_SPY_SIMPLE(EVT_LAST_STAGE_INIT, rinato_hwrev_env);
