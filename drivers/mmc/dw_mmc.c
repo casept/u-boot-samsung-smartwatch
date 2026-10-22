@@ -15,8 +15,10 @@
 #include <dwmmc.h>
 #include <wait_bit.h>
 #include <asm/cache.h>
+#include <div64.h>
 #include <linux/delay.h>
 #include <linux/iopoll.h>
+#include <linux/time.h>
 #include <power/regulator.h>
 
 #define PAGE_SIZE 4096
@@ -200,19 +202,38 @@ static int dwmci_fifo_ready(struct dwmci_host *host, u32 bit, u32 *len)
 	return 0;
 }
 
-static unsigned int dwmci_get_timeout(struct mmc *mmc, const unsigned int size)
+/* TAAC time values, in tenths */
+static const u8 dwmci_taac_value[] = {
+	0, 10, 12, 13, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80,
+};
+
+/*
+ * The longest the card may take to make progress, from its CSD like Linux's
+ * mmc_set_data_timeout(): ten times the access time for MMC (a hundred for
+ * SD), scaled by the read to write factor for writes, with SD's limits.
+ */
+static unsigned int dwmci_get_timeout(struct mmc *mmc, struct mmc_data *data)
 {
-	unsigned int timeout;
+	bool write = data->flags & MMC_DATA_WRITE;
+	u32 taac = (mmc->csd[0] >> 16) & 0xff;
+	u32 r2w = (mmc->csd[3] >> 26) & 0x7;
+	u64 timeout_ns = dwmci_taac_value[(taac >> 3) & 0xf];
+	unsigned int timeout_ms;
+	int i;
 
-	timeout = size * 8;	/* counting in bits */
-	timeout *= 10;		/* wait 10 times as long */
-	timeout /= mmc->clock;
-	timeout /= mmc->bus_width;
-	timeout /= mmc->ddr_mode ? 2 : 1;
-	timeout *= 1000;	/* counting in msec */
-	timeout = (timeout < 1000) ? 1000 : timeout;
+	/* The TAAC value is in tenths, so ten times TAAC for MMC is just this */
+	for (i = 0; i < (taac & 0x7); i++)
+		timeout_ns *= 10;
+	if (IS_SD(mmc))
+		timeout_ns *= 10;
+	if (write)
+		timeout_ns <<= r2w;
 
-	return timeout;
+	timeout_ms = DIV_ROUND_UP_ULL(timeout_ns, NSEC_PER_MSEC);
+	if (IS_SD(mmc))
+		timeout_ms = min(timeout_ms, write ? 3000U : 100U);
+
+	return max(timeout_ms, 1000U);
 }
 
 static int dwmci_data_transfer(struct dwmci_host *host, struct mmc_data *data)
@@ -220,6 +241,7 @@ static int dwmci_data_transfer(struct dwmci_host *host, struct mmc_data *data)
 	struct mmc *mmc = host->mmc;
 	int ret = 0;
 	u32 timeout, mask, size, i, len = 0;
+	u32 count, last_count = 0;
 	u32 *buf = NULL;
 	ulong start = get_timer(0);
 
@@ -229,7 +251,7 @@ static int dwmci_data_transfer(struct dwmci_host *host, struct mmc_data *data)
 	else
 		buf = (unsigned int *)data->src;
 
-	timeout = dwmci_get_timeout(mmc, size);
+	timeout = dwmci_get_timeout(mmc, data);
 
 	size /= 4;
 
@@ -293,7 +315,17 @@ static int dwmci_data_transfer(struct dwmci_host *host, struct mmc_data *data)
 			break;
 		}
 
-		/* Check for timeout */
+		/*
+		 * Time out when the card stops making progress, not on the
+		 * size of the transfer: writes can take much longer than
+		 * the bus needs while the card programs its flash.
+		 */
+		count = dwmci_readl(host, DWMCI_TBBCNT);
+		if (count != last_count) {
+			last_count = count;
+			start = get_timer(0);
+		}
+
 		if (get_timer(start) > timeout) {
 			debug("%s: Timeout waiting for data!\n", __func__);
 			ret = -ETIMEDOUT;
