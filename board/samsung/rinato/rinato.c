@@ -17,8 +17,10 @@
 #include <sysinfo.h>
 #include <sysreset.h>
 #include <time.h>
+#include <asm/global_data.h>
 #include <asm/gpio.h>
 #include <asm/io.h>
+#include <asm/setup.h>
 #include <dm/device_compat.h>
 #include <linux/bitops.h>
 
@@ -36,6 +38,8 @@
 /* PMU PS_HOLD_CONTROL, its level bit is what the poweroff node clears */
 #define PS_HOLD_CONTROL		0x1002330c
 #define PS_HOLD_HIGH		BIT(8)
+
+DECLARE_GLOBAL_DATA_PTR;
 
 /*
  * UART1 only leaves the SoC through the MUIC, which U-Boot switches to USB,
@@ -147,6 +151,55 @@ static int rinato_power_key_init(void)
 }
 
 EVENT_SPY_SIMPLE(EVT_LAST_STAGE_INIT, rinato_power_key_init);
+
+/*
+ * S-Boot starts U-Boot the way it starts a kernel, with ATAGs in r2. Its
+ * command line says why it booted (charging, recovery, ...) and how the
+ * watch was turned on, so give that to the boot script. save_boot_params in
+ * entry.S keeps r2.
+ */
+ulong sboot_atags __section(".data");
+
+static char *sboot_cmdline;
+
+/*
+ * The ATAGs are in S-Boot's debug area, which the RAM console clears when it
+ * is set up, so copy the command line out first
+ */
+static void rinato_sboot_cmdline_save(void)
+{
+	const struct tag *t, *tags = (const struct tag *)sboot_atags;
+
+	/* Started some other way, r2 may point anywhere */
+	if (sboot_atags < gd->ram_base ||
+	    sboot_atags >= gd->ram_base + gd->ram_size ||
+	    tags->hdr.tag != ATAG_CORE) {
+		log_warning("No ATAGs from S-Boot at %p\n", tags);
+		return;
+	}
+
+	for_each_tag(t, tags) {
+		if (t->hdr.tag == ATAG_CMDLINE) {
+			sboot_cmdline = strdup(t->u.cmdline.cmdline);
+			break;
+		}
+	}
+}
+
+void exynos_init(void)
+{
+	rinato_sboot_cmdline_save();
+}
+
+static int rinato_sboot_cmdline_env(void)
+{
+	if (sboot_cmdline)
+		env_set("sboot_cmdline", sboot_cmdline);
+
+	return 0;
+}
+
+EVENT_SPY_SIMPLE(EVT_LAST_STAGE_INIT, rinato_sboot_cmdline_env);
 
 extern u8 __splash_booting_begin[];
 extern u8 __splash_fastboot_begin[];
