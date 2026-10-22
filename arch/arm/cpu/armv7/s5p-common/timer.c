@@ -17,6 +17,11 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+/* Divider of timer 4, together with PRESCALER_1 for a 1 MHz count */
+#ifndef TIMER_MUX_DIV
+#define TIMER_MUX_DIV	MUX_DIV_4
+#endif
+
 unsigned long get_current_tick(void);
 static void reset_timer_masked(void);
 
@@ -44,7 +49,7 @@ static unsigned long timer_get_us_down(void)
 int timer_init(void)
 {
 	/* PWM Timer 4 */
-	s5p_pwm_init(4, MUX_DIV_4, 0);
+	s5p_pwm_init(4, TIMER_MUX_DIV, 0);
 	s5p_pwm_config(4, 100000, 100000);
 	s5p_pwm_enable(4);
 

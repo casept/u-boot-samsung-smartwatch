@@ -9,7 +9,17 @@
 #define __ASM_ARM_ARCH_PWM_H_
 
 #define PRESCALER_0		(8 - 1)		/* prescaler of timer 0, 1 */
+#ifdef CONFIG_EXYNOS3250
+/*
+ * The exynos3250 clocks the PWM block from aclk_100, which runs at 50 MHz:
+ * 50 MHz / 25 / 2 gives the 1 MHz the timer counts in.
+ */
+#define PRESCALER_1		(25 - 1)	/* prescaler of timer 2, 3, 4 */
+#define TIMER_MUX_DIV		MUX_DIV_2	/* divider of timer 4 */
+#else
 #define PRESCALER_1		(16 - 1)	/* prescaler of timer 2, 3, 4 */
+#define TIMER_MUX_DIV		MUX_DIV_4	/* divider of timer 4 */
+#endif
 
 /* Divider MUX */
 #define MUX_DIV_1		0		/* 1/1 period */
