@@ -392,6 +392,27 @@ static void dwmci_wait_while_busy(struct dwmci_host *host, struct mmc_cmd *cmd)
 	}
 }
 
+/*
+ * After a failed transfer, data may be left in the FIFO and the IDMAC may be
+ * stuck partway through its descriptors, failing every later transfer. Reset
+ * both like Linux's dw_mci_reset() does.
+ */
+static void dwmci_reset_data(struct dwmci_host *host)
+{
+	if (!dwmci_wait_reset(host, DWMCI_CTRL_FIFO_RESET |
+				    DWMCI_CTRL_DMA_RESET))
+		debug("%s: FIFO/DMA reset timeout\n", __func__);
+
+	if (!host->fifo_mode) {
+		dwmci_writel(host, DWMCI_BMOD,
+			     dwmci_readl(host, DWMCI_BMOD) |
+			     DWMCI_BMOD_IDMAC_RESET);
+		dwmci_writel(host, host->regs->idsts, 0xffffffff);
+	}
+
+	dwmci_writel(host, DWMCI_RINTSTS, DWMCI_INTMSK_ALL);
+}
+
 static int dwmci_send_cmd_common(struct dwmci_host *host, struct mmc_cmd *cmd,
 				 struct mmc_data *data, void *cur_idmac)
 {
@@ -520,6 +541,8 @@ static int dwmci_send_cmd_common(struct dwmci_host *host, struct mmc_cmd *cmd,
 			if (!ret)
 				ret = dma_ret;
 		}
+		if (ret)
+			dwmci_reset_data(host);
 	}
 
 	udelay(100);
