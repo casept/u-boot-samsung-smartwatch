@@ -87,6 +87,7 @@ config TARGET_ARTIK5
 config TARGET_RINATO
 	bool "EXYNOS3250 Rinato (Samsung Gear 2) board"
 	select EXYNOS3250
+	select REGEX
 
 endchoice
 endif

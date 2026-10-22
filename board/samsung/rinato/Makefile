@@ -7,3 +7,5 @@ obj-y += entry.o
 obj-y += rinato.o
 obj-y += booting.bmp.o
 obj-y += fastboot.bmp.o
+obj-y += recovery_fastboot.bmp.o
+obj-y += recovery_ums.bmp.o

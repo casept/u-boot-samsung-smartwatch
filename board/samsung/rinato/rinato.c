@@ -9,6 +9,7 @@
 #include <env.h>
 #include <errno.h>
 #include <event.h>
+#include <g_dnl.h>
 #include <linker_lists.h>
 #include <log.h>
 #include <mapmem.h>
@@ -26,6 +27,8 @@
 
 /* A press shorter than this is taken for a bounce */
 #define POWER_KEY_DEBOUNCE_MS	50
+/* In recovery, a press at least this long powers off, a shorter one switches */
+#define POWER_KEY_LONG_MS	2000
 /* Still running this long after PS_HOLD went low means USB keeps it on */
 #define POWER_OFF_TIMEOUT_MS	500
 
@@ -34,6 +37,10 @@
  * reboot. Otherwise, with a charger attached, S-Boot boots into charging.
  */
 #define SBOOT_INFORM2		0x10020808
+
+/* PMU INFORM3: S-Boot stores a reboot mode requested here */
+#define SBOOT_INFORM3		0x1002080c
+#define SBOOT_REBOOT_NORMAL	0x12345670
 
 /* PMU PS_HOLD_CONTROL, its level bit is what the poweroff node clears */
 #define PS_HOLD_CONTROL		0x1002330c
@@ -63,17 +70,20 @@ static ulong power_off_requested_at;
 /*
  * The boot script sets power_key to "fastboot" while a press should stop the
  * boot and start fastboot, and clears it when the key should power off again.
- * While it is set to anything else, the key does nothing.
+ * "recovery" makes a short press switch between fastboot and mass storage and
+ * a long one power off. While it is set to anything else, the key does nothing.
  */
-static bool power_key_requests_fastboot(void)
+static bool power_key_is(const char *action)
 {
-	const char *action = env_get("power_key");
+	const char *value = env_get("power_key");
 
-	return action && !strcmp(action, "fastboot");
+	return value && !strcmp(value, action);
 }
 
 static void rinato_power_key_poll(struct cyclic_info *c)
 {
+	ulong held;
+
 	/*
 	 * PS_HOLD is low now, but the PMIC stays on while USB powers the
 	 * watch. Do what S-Boot does then: restart without marking it a
@@ -103,7 +113,7 @@ static void rinato_power_key_poll(struct cyclic_info *c)
 		 * so that letting go doesn't power off the fastboot started.
 		 */
 		if (get_timer(power_key_pressed_at) >= POWER_KEY_DEBOUNCE_MS &&
-		    power_key_requests_fastboot()) {
+		    power_key_is("fastboot")) {
 			puts("\nPower key pressed, starting fastboot\n");
 			env_set("power_key", "pressed");
 			power_key_pressed_at = 0;
@@ -117,15 +127,22 @@ static void rinato_power_key_poll(struct cyclic_info *c)
 	if (!power_key_pressed_at)
 		return;
 
-	if (get_timer(power_key_pressed_at) < POWER_KEY_DEBOUNCE_MS) {
-		power_key_pressed_at = 0;
-		return;
-	}
-
+	held = get_timer(power_key_pressed_at);
 	power_key_pressed_at = 0;
 
-	if (env_get("power_key"))
+	if (held < POWER_KEY_DEBOUNCE_MS)
 		return;
+
+	if (power_key_is("recovery")) {
+		if (held < POWER_KEY_LONG_MS) {
+			/* Ends fastboot or mass storage, the script runs the other */
+			puts("\nPower key pressed, switching\n");
+			g_dnl_trigger_detach();
+			return;
+		}
+	} else if (env_get("power_key")) {
+		return;
+	}
 
 	/* The PMIC keeps the power on while the key is held, so act on release */
 	puts("\nPower key pressed, powering off\n");
@@ -189,6 +206,12 @@ static void rinato_sboot_cmdline_save(void)
 void exynos_init(void)
 {
 	rinato_sboot_cmdline_save();
+
+	/*
+	 * Ask for a normal boot, so that powering off or resetting from recovery
+	 * doesn't end up in recovery again.
+	 */
+	writel(SBOOT_REBOOT_NORMAL, SBOOT_INFORM3);
 }
 
 static int rinato_sboot_cmdline_env(void)
@@ -203,12 +226,18 @@ EVENT_SPY_SIMPLE(EVT_LAST_STAGE_INIT, rinato_sboot_cmdline_env);
 
 extern u8 __splash_booting_begin[];
 extern u8 __splash_fastboot_begin[];
+extern u8 __splash_recovery_fastboot_begin[];
+extern u8 __splash_recovery_ums_begin[];
 
 /* For the boot script to show once it knows what it boots */
 static int rinato_splash_env(void)
 {
 	env_set_hex("booting_splash", map_to_sysmem(__splash_booting_begin));
 	env_set_hex("fastboot_splash", map_to_sysmem(__splash_fastboot_begin));
+	env_set_hex("recovery_fastboot_splash",
+		    map_to_sysmem(__splash_recovery_fastboot_begin));
+	env_set_hex("recovery_ums_splash",
+		    map_to_sysmem(__splash_recovery_ums_begin));
 
 	return 0;
 }

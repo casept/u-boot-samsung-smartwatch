@@ -85,6 +85,8 @@ fit-dtb.blob*
 /*rcar4-sa0*
 /board/samsung/rinato/booting.bmp.S
 /board/samsung/rinato/fastboot.bmp.S
+/board/samsung/rinato/recovery_fastboot.bmp.S
+/board/samsung/rinato/recovery_ums.bmp.S
 /drivers/video/u_boot_logo.bmp.S
 /test/fdt_overlay/test-fdt-overlay-stacked.dtbo.S
 /test/fdt_overlay/test-fdt-overlay.dtbo.S
