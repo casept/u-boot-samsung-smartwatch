@@ -20,6 +20,8 @@
 #define	DWMMC_MAX_CH_NUM		4
 #define	DWMMC_MAX_FREQ			208000000
 #define	DWMMC_MIN_FREQ			400000
+/* Keep the CIU input clock at least this fast, like Linux does */
+#define EXYNOS_CCLKIN_MIN		50000000
 #define	DWMMC_MMC0_SDR_TIMING_VAL	0x03030001
 #define	DWMMC_MMC2_SDR_TIMING_VAL	0x03020001
 
@@ -211,6 +213,13 @@ static unsigned int exynos_dwmci_get_clk(struct dwmci_host *host, uint freq)
 	    host->mmc->selected_mode == MMC_HS_400) {
 		freq *= 2;
 	}
+
+	/*
+	 * Slow card clocks come from the controller's divider, not from the
+	 * source clock, whose dividers can't go that low.
+	 */
+	if (freq < EXYNOS_CCLKIN_MIN)
+		freq = EXYNOS_CCLKIN_MIN;
 
 	clk_div = exynos_dwmmc_get_ciu_div(host);
 	err = exynos_dwmmc_set_sclk(host, freq * clk_div);
