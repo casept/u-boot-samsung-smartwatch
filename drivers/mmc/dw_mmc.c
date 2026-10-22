@@ -16,6 +16,7 @@
 #include <wait_bit.h>
 #include <asm/cache.h>
 #include <linux/delay.h>
+#include <linux/iopoll.h>
 #include <power/regulator.h>
 
 #define PAGE_SIZE 4096
@@ -749,9 +750,27 @@ int dwmci_probe(struct udevice *dev)
 	return dwmci_init(mmc);
 }
 
+/*
+ * Wait for the card to release DAT0 by watching the controller's
+ * data_busy flag. Without this the core polls with CMD13, which the
+ * controller holds back until the card stops being busy, so commands
+ * pile up behind a long write.
+ */
+static int dwmci_wait_dat0(struct udevice *dev, int state, int timeout_us)
+{
+	struct mmc *mmc = mmc_get_mmc_dev(dev);
+	struct dwmci_host *host = mmc->priv;
+	u32 status;
+
+	return readl_poll_timeout(host->ioaddr + DWMCI_STATUS, status,
+				  !(status & DWMCI_BUSY) == !!state,
+				  timeout_us);
+}
+
 const struct dm_mmc_ops dm_dwmci_ops = {
 	.send_cmd	= dwmci_send_cmd,
 	.set_ios	= dwmci_set_ios,
+	.wait_dat0	= dwmci_wait_dat0,
 };
 
 #else
