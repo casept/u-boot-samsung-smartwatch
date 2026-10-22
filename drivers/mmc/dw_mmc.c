@@ -582,10 +582,14 @@ static int dwmci_setup_bus(struct dwmci_host *host, u32 freq)
 		return -EINVAL;
 	}
 
-	if (sclk == freq)
-		div = 0; /* bypass mode */
-	else
-		div = DIV_ROUND_UP(sclk, 2 * freq);
+	/*
+	 * Like Linux: the card clock is sclk / (2 * div), or sclk itself in
+	 * bypass mode. Don't halve it when sclk came out at or below freq.
+	 */
+	div = sclk / freq;
+	if (sclk % freq && sclk > freq)
+		div++;
+	div = sclk != freq ? DIV_ROUND_UP(div, 2) : 0;
 
 	ret = dwmci_update_div(host, div);
 	if (ret)
