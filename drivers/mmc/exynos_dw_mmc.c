@@ -475,7 +475,9 @@ static int exynos_dwmmc_probe(struct udevice *dev)
 	host->get_mmc_clk = exynos_dwmci_get_clk;
 
 #ifdef CONFIG_BLK
-	dwmci_setup_cfg(&plat->cfg, host, DWMMC_MAX_FREQ, DWMMC_MIN_FREQ);
+	dwmci_setup_cfg(&plat->cfg, host,
+			dev_read_u32_default(dev, "max-frequency", DWMMC_MAX_FREQ),
+			DWMMC_MIN_FREQ);
 	host->mmc = &plat->mmc;
 #else
 	err = add_dwmci(host, DWMMC_MAX_FREQ, DWMMC_MIN_FREQ);
