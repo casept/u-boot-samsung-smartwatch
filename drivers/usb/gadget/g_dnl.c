@@ -291,6 +291,13 @@ int g_dnl_register(const char *name)
 	int ret;
 
 	debug("%s: g_dnl_driver.name = %s\n", __func__, name);
+
+	/* Another gadget is running, don't rename it */
+	if (composite) {
+		printf("%s: %s is still registered\n", __func__,
+		       g_dnl_driver.name);
+		return -EBUSY;
+	}
 	g_dnl_driver.name = name;
 
 	ret = usb_composite_register(&g_dnl_driver);
