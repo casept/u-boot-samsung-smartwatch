@@ -11,6 +11,14 @@
 #include <linux/printk.h>
 #include <linux/usb/gadget.h>
 
+/*
+ * Gadgets nest: a command run from fastboot can get the controller fastboot
+ * is using. Count the users so that only the last put removes the device.
+ */
+struct udc_uc_priv {
+	unsigned int users;
+};
+
 #if CONFIG_IS_ENABLED(DM_USB_GADGET)
 static inline const struct usb_gadget_generic_ops *
 usb_gadget_generic_dev_ops(struct udevice *dev)
@@ -33,27 +41,32 @@ int dm_usb_gadget_handle_interrupts(struct udevice *dev)
 
 int udc_device_get_by_index(int index, struct udevice **udev)
 {
+	struct udc_uc_priv *uc_priv;
 	struct udevice *dev = NULL;
 	int ret;
 
 	ret = uclass_get_device_by_seq(UCLASS_USB_GADGET_GENERIC, index, &dev);
-	if (!ret && dev) {
-		*udev = dev;
-		return 0;
+	if (ret || !dev)
+		ret = uclass_get_device(UCLASS_USB_GADGET_GENERIC, index, &dev);
+	if (ret || !dev) {
+		pr_err("No USB device found\n");
+		return -ENODEV;
 	}
 
-	ret = uclass_get_device(UCLASS_USB_GADGET_GENERIC, index, &dev);
-	if (!ret && dev) {
-		*udev = dev;
-		return 0;
-	}
+	uc_priv = dev_get_uclass_priv(dev);
+	uc_priv->users++;
+	*udev = dev;
 
-	pr_err("No USB device found\n");
-	return -ENODEV;
+	return 0;
 }
 
 int udc_device_put(struct udevice *udev)
 {
+	struct udc_uc_priv *uc_priv = dev_get_uclass_priv(udev);
+
+	if (uc_priv->users && --uc_priv->users)
+		return 0;
+
 #if CONFIG_IS_ENABLED(DM_DEVICE_REMOVE)
 	return device_remove(udev, DM_REMOVE_NORMAL);
 #else
@@ -85,5 +98,6 @@ UCLASS_DRIVER(usb_gadget_generic) = {
 	.id		= UCLASS_USB_GADGET_GENERIC,
 	.name		= "usb_gadget",
 	.flags		= DM_UC_FLAG_SEQ_ALIAS,
+	.per_device_auto	= sizeof(struct udc_uc_priv),
 };
 #endif
