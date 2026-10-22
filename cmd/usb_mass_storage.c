@@ -186,6 +186,8 @@ static int do_usb_mass_storage(struct cmd_tbl *cmdtp, int flag,
 		goto cleanup_board;
 	}
 
+	g_dnl_clear_detach();
+
 	rc = g_dnl_register("usb_dnl_ums");
 	if (rc) {
 		pr_err("g_dnl_register failed\n");
@@ -255,6 +257,7 @@ static int do_usb_mass_storage(struct cmd_tbl *cmdtp, int flag,
 
 cleanup_register:
 	g_dnl_unregister();
+	g_dnl_clear_detach();
 cleanup_board:
 	udc_device_put(udc);
 cleanup_ums_init:

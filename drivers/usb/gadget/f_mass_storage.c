@@ -669,6 +669,10 @@ static int sleep_thread(struct fsg_common *common)
 			if (common->eject)
 				return -EPIPE;
 
+			/* Handle a detach request, as fastboot and DFU do */
+			if (g_dnl_detach())
+				return -EPIPE;
+
 			/* Handle CTRL+C */
 			if (ctrlc())
 				return -EPIPE;
