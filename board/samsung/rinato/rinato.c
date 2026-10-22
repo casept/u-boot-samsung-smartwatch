@@ -37,6 +37,18 @@
 #define PS_HOLD_CONTROL		0x1002330c
 #define PS_HOLD_HIGH		BIT(8)
 
+/*
+ * UART1 only leaves the SoC through the MUIC, which U-Boot switches to USB,
+ * so nothing drives RXD1. Without a pull it reads low after a cold boot,
+ * the UART receives a break as a NUL character and that stops autoboot.
+ */
+int exynos_early_init_f(void)
+{
+	gpio_set_pull(EXYNOS4_GPIO_A04, S5P_GPIO_PULL_UP);
+
+	return 0;
+}
+
 static struct cyclic_info power_key_cyclic;
 static struct udevice *power_key;
 /* The key may still be held from turning the watch on */
