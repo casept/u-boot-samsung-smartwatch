@@ -275,6 +275,7 @@ static void acm_unbind(struct usb_configuration *c, struct usb_function *f)
 	buf_free(&f_acm->rx_buf);
 	buf_free(&f_acm->tx_buf);
 
+	udc_device_put(f_acm->udc);
 	free(f_acm);
 }
 
@@ -582,7 +583,7 @@ static int acm_add(struct usb_configuration *c)
 
 	status = usb_add_function(c, &f_acm->usb_function);
 	if (status)
-		goto err;
+		goto err_put;
 
 	buf_init(&f_acm->rx_buf, 2048);
 	buf_init(&f_acm->tx_buf, 2048);
@@ -592,6 +593,8 @@ static int acm_add(struct usb_configuration *c)
 
 	return 0;
 
+err_put:
+	udc_device_put(f_acm->udc);
 err:
 	free(f_acm);
 	return status;
@@ -655,6 +658,9 @@ static void acm_stdio_puts(struct stdio_dev *dev, const char *str)
 	__acm_tx(f_acm);
 }
 
+/* The controller the console took in acm_stdio_start() */
+static struct udevice *acm_stdio_udc;
+
 static int acm_stdio_start(struct stdio_dev *dev)
 {
 	struct udevice *udc;
@@ -673,8 +679,11 @@ static int acm_stdio_start(struct stdio_dev *dev)
 	g_dnl_clear_detach();
 
 	ret = g_dnl_register("usb_serial_acm");
-	if (ret)
+	if (ret) {
+		udc_device_put(udc);
 		return ret;
+	}
+	acm_stdio_udc = udc;
 
 	if (default_acm_function)
 		dev->priv = default_acm_function;
@@ -709,6 +718,11 @@ static int acm_stdio_stop(struct stdio_dev *dev)
 
 	g_dnl_unregister();
 	g_dnl_clear_detach();
+
+	if (acm_stdio_udc) {
+		udc_device_put(acm_stdio_udc);
+		acm_stdio_udc = NULL;
+	}
 
 	return 0;
 }
